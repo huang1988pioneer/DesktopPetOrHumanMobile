@@ -212,6 +212,7 @@ public class OverlayPetView extends View {
         paint.setColor(Color.argb(100, 0, 0, 0));
         rect.set(left + size * 0.22f, top + size * 0.84f, left + size * 0.86f, top + size * 0.96f);
         canvas.drawOval(rect, paint);
+        paint.setAlpha(255);
         if (humanMode && bitmap != null) {
             rect.set(left, top, left + size, top + size);
             canvas.drawBitmap(bitmap, null, rect, paint);
