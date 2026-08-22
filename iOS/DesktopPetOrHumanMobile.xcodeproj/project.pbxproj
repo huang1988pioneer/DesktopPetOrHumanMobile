@@ -1,0 +1,52 @@
+// !$*UTF8*$!
+{
+ archiveVersion = 1;
+ classes = {};
+ objectVersion = 77;
+ objects = {
+/* Begin PBXBuildFile section */
+  A00000000000000000000011 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000001 /* App.swift */; };
+  A00000000000000000000021 /* CharacterTalk.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000020 /* CharacterTalk.swift */; };
+/* End PBXBuildFile section */
+/* Begin PBXFileReference section */
+  A00000000000000000000001 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+  A00000000000000000000020 /* CharacterTalk.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterTalk.swift; sourceTree = "<group>"; };
+  A00000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+  A00000000000000000000003 /* DesktopPetOrHumanMobile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DesktopPetOrHumanMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+/* Begin PBXGroup section */
+  A00000000000000000000004 = {isa = PBXGroup; children = (A00000000000000000000005 /* DesktopPetOrHumanMobile */, A00000000000000000000006 /* Products */); sourceTree = "<group>"; };
+  A00000000000000000000005 /* DesktopPetOrHumanMobile */ = {isa = PBXGroup; children = (A00000000000000000000001 /* App.swift */, A00000000000000000000020 /* CharacterTalk.swift */, A00000000000000000000002 /* Info.plist */); path = DesktopPetOrHumanMobile; sourceTree = "<group>"; };
+  A00000000000000000000006 /* Products */ = {isa = PBXGroup; children = (A00000000000000000000003 /* DesktopPetOrHumanMobile.app */); name = Products; sourceTree = "<group>"; };
+/* End PBXGroup section */
+/* Begin PBXNativeTarget section */
+  A00000000000000000000007 /* DesktopPetOrHumanMobile */ = {isa = PBXNativeTarget; buildConfigurationList = A00000000000000000000008 /* Build configuration list for PBXNativeTarget */; buildPhases = (A00000000000000000000009 /* Sources */, A00000000000000000000010 /* Frameworks */, A00000000000000000000012 /* Resources */, A00000000000000000000022 /* Copy Characters */); buildRules = (); dependencies = (); name = DesktopPetOrHumanMobile; productName = DesktopPetOrHumanMobile; productReference = A00000000000000000000003 /* DesktopPetOrHumanMobile.app */; productType = "com.apple.product-type.application"; };
+/* End PBXNativeTarget section */
+/* Begin PBXProject section */
+  A00000000000000000000013 /* Project object */ = {isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2620; LastUpgradeCheck = 2620; TargetAttributes = { A00000000000000000000007 = { CreatedOnToolsVersion = 26.2; }; }; }; buildConfigurationList = A00000000000000000000014 /* Build configuration list for PBXProject */; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = A00000000000000000000004; productRefGroup = A00000000000000000000006 /* Products */; projectDirPath = ""; projectRoot = ""; targets = (A00000000000000000000007 /* DesktopPetOrHumanMobile */); };
+/* End PBXProject section */
+/* Begin PBXResourcesBuildPhase section */
+  A00000000000000000000012 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+/* Begin PBXSourcesBuildPhase section */
+  A00000000000000000000009 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000011 /* App.swift in Sources */, A00000000000000000000021 /* CharacterTalk.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+/* Begin PBXFrameworksBuildPhase section */
+  A00000000000000000000010 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+/* Begin PBXShellScriptBuildPhase section */
+  A00000000000000000000022 /* Copy Characters */ = {isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputPaths = (); name = "Copy Characters"; outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/zsh; shellScript = "DEST=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Characters\"\nmkdir -p \"$DEST\"\ncp \"$SRCROOT/../app/src/main/res/drawable-nodpi/\"*.png \"$DEST/\"\nICON_SRC=\"$SRCROOT/../app/src/main/res/drawable-nodpi/fengge_idle.png\"\nif [[ -f \"$ICON_SRC\" ]]; then\n  sips -z 180 180 \"$ICON_SRC\" --out \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/AppIcon.png\" >/dev/null\nfi\n"; };
+/* End PBXShellScriptBuildPhase section */
+/* Begin XCBuildConfiguration section */
+  A00000000000000000000015 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_TESTABILITY = YES; GCC_C_LANGUAGE_STANDARD = gnu17; SDKROOT = iphoneos; SWIFT_VERSION = 5.0; }; name = Debug; };
+  A00000000000000000000016 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; GCC_C_LANGUAGE_STANDARD = gnu17; SDKROOT = iphoneos; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_OPTIMIZATION_LEVEL = "-O"; SWIFT_VERSION = 5.0; }; name = Release; };
+  A00000000000000000000017 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGNING_ALLOWED = NO; CODE_SIGNING_REQUIRED = NO; DEVELOPMENT_TEAM = CR63JJ5KWY; INFOPLIST_FILE = DesktopPetOrHumanMobile/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 16.0; PRODUCT_BUNDLE_IDENTIFIER = com.huang1988pioneer.desktoppetorhumanmobile; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
+  A00000000000000000000018 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGNING_ALLOWED = NO; CODE_SIGNING_REQUIRED = NO; DEVELOPMENT_TEAM = CR63JJ5KWY; INFOPLIST_FILE = DesktopPetOrHumanMobile/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 16.0; PRODUCT_BUNDLE_IDENTIFIER = com.huang1988pioneer.desktoppetorhumanmobile; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
+/* End XCBuildConfiguration section */
+/* Begin XCConfigurationList section */
+  A00000000000000000000014 /* Build configuration list for PBXProject */ = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000015 /* Debug */, A00000000000000000000016 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+  A00000000000000000000008 /* Build configuration list for PBXNativeTarget */ = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000017 /* Debug */, A00000000000000000000018 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+ };
+ rootObject = A00000000000000000000013 /* Project object */;
+}

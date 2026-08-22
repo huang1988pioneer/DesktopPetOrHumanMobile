@@ -24,3 +24,28 @@ Open the project in Android Studio, or build from a terminal with Gradle:
 ```
 
 The project uses Android Gradle Plugin 8.10.1, `compileSdk 36`, and JDK 17.
+
+## iOS release
+
+`iOS/` is a native SwiftUI companion. iOS does not allow third-party apps to
+draw over other apps, so the pet lives on this app's own home-screen desktop
+instead of a system overlay.
+
+Minimum iOS version is 16. Bundle ID is
+`com.huang1988pioneer.desktoppetorhumanmobile`.
+
+```shell
+cd iOS
+./package-ipa.sh
+```
+
+Output:
+
+- `releases/ios/v1.0.0/DesktopPetOrHumanMobile-v1.0.0-ios.ipa` (Apple Development signed)
+- `releases/ios/v1.0.0/DesktopPetOrHumanMobile-v1.0.0-ios.ipa.sha256`
+- `releases/ios/v1.0.0/DesktopPetOrHumanMobile-v1.0.0-ios-unsigned.ipa`
+- `releases/ios/v1.0.0/DesktopPetOrHumanMobile-v1.0.0-ios-unsigned.ipa.sha256`
+
+The signed IPA can be installed on devices registered to team `CR63JJ5KWY`.
+Unsigned IPA is for later re-signing. App Store / TestFlight still needs
+Archive and Distribute App in Xcode.

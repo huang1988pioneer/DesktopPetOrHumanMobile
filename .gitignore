@@ -5,3 +5,15 @@ local.properties
 *.iml
 app/build/
 .tmp-javac/
+.kotlin/
+.DS_Store
+.externalNativeBuild/
+.cxx/
+captures/
+
+# iOS build products
+iOS/build/
+**/xcuserdata/
+*.xcuserstate
+*.xcarchive
+
