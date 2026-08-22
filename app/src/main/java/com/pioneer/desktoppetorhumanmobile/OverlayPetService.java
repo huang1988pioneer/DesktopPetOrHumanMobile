@@ -31,6 +31,10 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
     private static final String CHANNEL_ID = "desktop_pet_overlay";
     private static final String PREFS_NAME = "desktop_pet";
     private static final String PREF_STAY_ON_TOP = "stay_on_top";
+    private static final String PREF_CHARACTER_INDEX = "character_index";
+    private static final String PREF_SIZE_LEVEL = "size_level";
+    private static final String PREF_POS_X = "pos_x";
+    private static final String PREF_POS_Y = "pos_y";
     private static final int NOTIFICATION_ID = 1001;
 
     static boolean running;
@@ -57,6 +61,12 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
     private boolean appWatchWarm = true;
     private final java.util.ArrayDeque<AppTalkItem> pendingAppTalks = new java.util.ArrayDeque<>();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Runnable savePositionRunnable = new Runnable() {
+        @Override
+        public void run() {
+            savePositionNow();
+        }
+    };
     private final Runnable appWatchRunnable = new Runnable() {
         @Override
         public void run() {
@@ -95,7 +105,7 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         running = true;
         stayOnTop = isStayOnTop(this);
-        sizeLevel = OverlayPetView.DEFAULT_SIZE_LEVEL;
+        sizeLevel = savedSizeLevel(this);
         overlayMode = OverlayPetView.MODE_COMPACT;
         rebuildSizes();
         captureScreen();
@@ -142,6 +152,8 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
     public void onDestroy() {
         running = false;
         mainHandler.removeCallbacks(appWatchRunnable);
+        mainHandler.removeCallbacks(savePositionRunnable);
+        savePositionNow();
         if (orientationListener != null) {
             orientationListener.disable();
         }
@@ -164,6 +176,7 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
         params.x += Math.round(dx);
         params.y += Math.round(dy);
         windowManager.updateViewLayout(petView, params);
+        scheduleSavePosition();
     }
 
     @Override
@@ -182,6 +195,7 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
             return;
         }
         sizeLevel = clamped;
+        saveSizeLevel(this, sizeLevel);
         rebuildSizes();
         applyCurrentLayout();
     }
@@ -194,6 +208,20 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
     @Override
     public boolean isStayOnTop() {
         return stayOnTop;
+    }
+
+    @Override
+    public void resetToBottomRight() {
+        if (params == null || petView == null) {
+            return;
+        }
+        overlayMode = OverlayPetView.MODE_COMPACT;
+        params.width = compactSize;
+        params.height = compactSize;
+        captureScreen();
+        pinToBottomRight();
+        windowManager.updateViewLayout(petView, params);
+        savePositionNow();
     }
 
     @Override
@@ -212,6 +240,66 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
                 .apply();
     }
 
+    static int savedCharacterIndex(Context context) {
+        return context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getInt(PREF_CHARACTER_INDEX, 0);
+    }
+
+    static void saveCharacterIndex(Context context, int index) {
+        context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .edit()
+                .putInt(PREF_CHARACTER_INDEX, index)
+                .apply();
+    }
+
+    static int savedSizeLevel(Context context) {
+        int level = context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .getInt(PREF_SIZE_LEVEL, OverlayPetView.DEFAULT_SIZE_LEVEL);
+        if (level < 0 || level >= OverlayPetView.SIZE_LEVEL_COUNT) {
+            return OverlayPetView.DEFAULT_SIZE_LEVEL;
+        }
+        return level;
+    }
+
+    static void saveSizeLevel(Context context, int level) {
+        context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .edit()
+                .putInt(PREF_SIZE_LEVEL, level)
+                .apply();
+    }
+
+    private void scheduleSavePosition() {
+        mainHandler.removeCallbacks(savePositionRunnable);
+        mainHandler.postDelayed(savePositionRunnable, 250);
+    }
+
+    private void savePositionNow() {
+        if (params == null) {
+            return;
+        }
+        int x = params.x + params.width - compactSize;
+        int y = params.y + params.height - compactSize;
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .edit()
+                .putInt(PREF_POS_X, x)
+                .putInt(PREF_POS_Y, y)
+                .apply();
+    }
+
+    private void applySavedOrDefaultPosition() {
+        android.content.SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        if (prefs.contains(PREF_POS_X) && prefs.contains(PREF_POS_Y)) {
+            params.x = prefs.getInt(PREF_POS_X, 0);
+            params.y = prefs.getInt(PREF_POS_Y, 0);
+            return;
+        }
+        pinToBottomRight();
+    }
+
+    private void pinToBottomRight() {
+        params.x = screenWidth - compactSize - dp(8);
+        params.y = screenHeight - compactSize - dp(80);
+    }
+
     private void addPetWindow() {
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -223,8 +311,7 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
                 overlayFlags(),
                 PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
-        params.x = getResources().getDisplayMetrics().widthPixels - compactSize - dp(16);
-        params.y = getResources().getDisplayMetrics().heightPixels - compactSize - dp(120);
+        applySavedOrDefaultPosition();
 
         petView = new OverlayPetView(this);
         petView.setHost(this);
@@ -234,7 +321,7 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
     private void rebuildSizes() {
         compactSize = dp(OverlayPetView.COMPACT_DP[sizeLevel]);
         menuWidth = Math.max(compactSize, dp(220));
-        menuHeight = compactSize + dp(250);
+        menuHeight = compactSize + dp(300);
         pickerWidth = Math.max(compactSize, dp(312));
         pickerHeight = compactSize + dp(308);
     }
@@ -317,6 +404,7 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
         params.x = Math.max(0, Math.min(maxX, params.x));
         params.y = Math.max(0, Math.min(maxY, params.y));
         windowManager.updateViewLayout(petView, params);
+        savePositionNow();
     }
 
     private void applyCurrentLayout() {
@@ -347,6 +435,7 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
         params.x -= newWidth - oldWidth;
         params.y -= newHeight - oldHeight;
         windowManager.updateViewLayout(petView, params);
+        savePositionNow();
     }
 
     private Notification createNotification() {

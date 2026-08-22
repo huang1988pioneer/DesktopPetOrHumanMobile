@@ -38,10 +38,12 @@ public class OverlayPetView extends View {
 
         boolean isStayOnTop();
 
+        void resetToBottomRight();
+
         void closeOverlay();
     }
 
-    private static final String[] CHARACTER_IDS = {
+    static final String[] CHARACTER_IDS = {
             "fengge", "fengxiong", "gugugaga", "laowangmao",
             "miaobaibai", "miaobubu", "miaoniang", "tuge",
             "xiaotu", "xiaoying", "yamei", "yumei"
@@ -51,7 +53,7 @@ public class OverlayPetView extends View {
             "喵白白", "喵布布", "喵娘", "兔哥",
             "小兔", "小影", "雅美", "玉美"
     };
-    private static final String[] MENU_LABELS = {"角色", "模式", "睡一下", "取消置頂", "關閉"};
+    private static final String[] MENU_LABELS = {"角色", "模式", "睡一下", "取消置頂", "回到右下角", "關閉"};
     private static final boolean[] PRIMARY_IS_HUMAN = {
             true, true, false, false,
             false, false, true, true,
@@ -67,7 +69,7 @@ public class OverlayPetView extends View {
     private static final int FORM_HUMAN = 0;
     private static final int FORM_PET = 1;
     static final int SIZE_LEVEL_COUNT = 5;
-    static final int DEFAULT_SIZE_LEVEL = 2;
+    static final int DEFAULT_SIZE_LEVEL = SIZE_LEVEL_COUNT - 1;
     static final int[] COMPACT_DP = {168, 210, 260, 324, 400};
     private static final int PICKER_COLS = 3;
     private static final int PICKER_ROWS = 4;
@@ -218,6 +220,9 @@ public class OverlayPetView extends View {
                 humanForm[i] = false;
             }
         }
+        int saved = OverlayPetService.savedCharacterIndex(context);
+        characterIndex = saved >= 0 && saved < CHARACTER_IDS.length ? saved : 0;
+        sizeLevel = OverlayPetService.savedSizeLevel(context);
     }
 
     public void setHost(Host host) {
@@ -381,6 +386,13 @@ public class OverlayPetView extends View {
                 }
                 break;
             case 4:
+                hideMenu();
+                if (host != null) {
+                    host.resetToBottomRight();
+                }
+                say("回到右下角");
+                return;
+            case 5:
                 beginFarewell();
                 return;
             default:
@@ -391,6 +403,7 @@ public class OverlayPetView extends View {
 
     private void selectCharacter(int index) {
         characterIndex = index;
+        OverlayPetService.saveCharacterIndex(getContext(), characterIndex);
         happiness = 82;
         energy = Math.max(energy, 48);
         say(CharacterTalk.greeting(characterIndex), 3200);
@@ -583,6 +596,7 @@ public class OverlayPetView extends View {
                 : index == 1 ? Color.rgb(255, 193, 87)
                 : index == 2 ? Color.rgb(164, 148, 255)
                 : index == 3 ? Color.rgb(80, 196, 186)
+                : index == 4 ? Color.rgb(255, 170, 80)
                 : Color.rgb(255, 100, 100);
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(color);
