@@ -13,15 +13,27 @@ import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewConfiguration;
 
 public class OverlayPetView extends View {
+    static final int MODE_COMPACT = 0;
+    static final int MODE_MENU = 1;
+    static final int MODE_PICKER = 2;
+
     interface Host {
         void moveBy(float dx, float dy);
 
-        void setMenuExpanded(boolean expanded);
+        void setOverlayMode(int mode);
+
+        void setSizeLevel(int level);
+
+        void setStayOnTop(boolean stayOnTop);
+
+        boolean isStayOnTop();
 
         void closeOverlay();
     }
@@ -36,23 +48,71 @@ public class OverlayPetView extends View {
             "喵白白", "喵布布", "喵娘", "兔哥",
             "小兔", "小影", "雅美", "玉美"
     };
-    private static final String[] MENU_LABELS = {"角色", "模式", "餵食", "玩耍", "休息", "關閉"};
+    private static final String[] MENU_LABELS = {"角色", "模式", "睡一下", "取消置頂", "關閉"};
+    private static final boolean[] PRIMARY_IS_HUMAN = {
+            true, true, false, false,
+            false, false, true, true,
+            true, true, true, true
+    };
+    private static final String[] PET_MODE_NAMES = {
+            "黑貓模式", "柴犬模式", "企鵝模式", "招財貓模式",
+            "白貓模式", "三花模式", "貓咪模式", "兔子模式",
+            "兔子模式", "黑貓模式", "紅貓模式", "海豚模式"
+    };
+    private static final String[] PET_CHAT = {
+            "喵。", "汪。", "啾。", "喵。",
+            "喵。", "喵。", "喵。", "蹦。",
+            "蹦。", "喵。", "喵。", "噗。"
+    };
+    private static final String[] CHEER_LINES = {
+            "做得好！", "哈哈，被你逗樂了", "ガガガ！好開心", "金元寶來了！",
+            "喵嗚！好開心", "嘿嘿，再摸一下！", "喵喵！最喜歡你了", "耶嘿！超有精神",
+            "耶！今天也超讚", "有被鼓勵到…", "呵呵，好開心", "尾巴都在搖了！"
+    };
+    private static final String[] PET_CHEER = {
+            "喵嗚！", "汪汪！", "ガガ！", "喵！",
+            "喵嗚！", "喵喵！", "喵！", "蹦蹦！",
+            "蹦！", "喵！", "喵嗚！", "噗噗！"
+    };
+    private static final String[] SLEEP_LINES = {
+            "午休十分鐘，別吵", "先瞇一下，別吵", "企鵝要站著睡了…Zzz", "賺飽了，先睡一波",
+            "白白想睡了…", "布布先趴一下…", "喵娘要捲成一團了", "才沒有累…只是躺一下",
+            "先喝口茶再睡…", "先閉一下眼…", "蓋好被子，晚安", "縮回貝殼裡睡一下"
+    };
+    private static final String[] PET_SLEEP = {
+            "呼…", "呼…", "Zzz…", "呼喵…",
+            "呼喵…", "呼喵…", "呼喵…", "呼…",
+            "呼…", "呼…", "呼喵…", "呼…"
+    };
+    private static final long CHEER_DURATION_MS = 3000;
+    private static final long NAP_DURATION_MS = 3000;
+    private static final int FORM_HUMAN = 0;
+    private static final int FORM_PET = 1;
+    static final int SIZE_LEVEL_COUNT = 5;
+    static final int DEFAULT_SIZE_LEVEL = 2;
+    static final int[] COMPACT_DP = {168, 210, 260, 324, 400};
+    private static final int PICKER_COLS = 3;
+    private static final int PICKER_ROWS = 4;
 
-    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final RectF rect = new RectF();
     private final Path path = new Path();
-    private final Bitmap[] idleBitmaps = new Bitmap[CHARACTER_IDS.length];
-    private final Bitmap[] happyBitmaps = new Bitmap[CHARACTER_IDS.length];
-    private final Bitmap[] sleepBitmaps = new Bitmap[CHARACTER_IDS.length];
+    private final Bitmap[][] idleBitmaps = new Bitmap[2][CHARACTER_IDS.length];
+    private final Bitmap[][] happyBitmaps = new Bitmap[2][CHARACTER_IDS.length];
+    private final Bitmap[][] sleepBitmaps = new Bitmap[2][CHARACTER_IDS.length];
+    private final boolean[] humanForm = new boolean[CHARACTER_IDS.length];
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private final ScaleGestureDetector scaleDetector;
+    private final GestureDetector gestureDetector;
     private final Runnable longPressRunnable = new Runnable() {
         @Override
         public void run() {
             if (pressing && !dragging) {
+                pickerVisible = false;
                 menuVisible = true;
                 longPressTriggered = true;
                 if (host != null) {
-                    host.setMenuExpanded(true);
+                    host.setOverlayMode(MODE_MENU);
                 }
                 say("選單");
             }
@@ -60,12 +120,17 @@ public class OverlayPetView extends View {
     };
 
     private Host host;
-    private boolean humanMode = true;
     private int characterIndex;
     private boolean menuVisible;
+    private boolean pickerVisible;
     private boolean pressing;
     private boolean dragging;
+    private boolean pinching;
+    private boolean scaledThisGesture;
     private boolean longPressTriggered;
+    private int sizeLevel = DEFAULT_SIZE_LEVEL;
+    private int pinchStartLevel;
+    private float pinchStartSpan;
     private float lastRawX;
     private float lastRawY;
     private float downX;
@@ -76,20 +141,122 @@ public class OverlayPetView extends View {
     private int touchSlop;
     private String bubble = "";
     private long bubbleUntil;
+    private long cheerUntil;
+    private long napUntil;
 
     public OverlayPetView(Context context) {
         super(context);
         setWillNotDraw(false);
         touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+        scaleDetector = new ScaleGestureDetector(context, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            @Override
+            public boolean onScaleBegin(ScaleGestureDetector detector) {
+                pinching = true;
+                scaledThisGesture = true;
+                pressing = false;
+                dragging = false;
+                handler.removeCallbacks(longPressRunnable);
+                hideMenu();
+                pinchStartSpan = detector.getCurrentSpan();
+                pinchStartLevel = sizeLevel;
+                return true;
+            }
+
+            @Override
+            public boolean onScale(ScaleGestureDetector detector) {
+                if (pinchStartSpan <= 1f) {
+                    return true;
+                }
+                float ratio = detector.getCurrentSpan() / pinchStartSpan;
+                int delta = Math.round((float) (Math.log(ratio) / Math.log(1.23)));
+                int next = Math.max(0, Math.min(SIZE_LEVEL_COUNT - 1, pinchStartLevel + delta));
+                applySizeLevel(next);
+                return true;
+            }
+
+            @Override
+            public void onScaleEnd(ScaleGestureDetector detector) {
+                pinching = false;
+            }
+        });
+        scaleDetector.setQuickScaleEnabled(false);
+        gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onDown(MotionEvent event) {
+                return true;
+            }
+
+            @Override
+            public boolean onSingleTapConfirmed(MotionEvent event) {
+                if (shouldIgnoreTap(event)) {
+                    return false;
+                }
+                greet();
+                return true;
+            }
+
+            @Override
+            public boolean onDoubleTap(MotionEvent event) {
+                if (shouldIgnoreTap(event)) {
+                    return false;
+                }
+                cheer();
+                return true;
+            }
+        });
+        gestureDetector.setIsLongpressEnabled(false);
         for (int i = 0; i < CHARACTER_IDS.length; i++) {
-            idleBitmaps[i] = loadBitmap(CHARACTER_IDS[i] + "_idle");
-            happyBitmaps[i] = loadBitmap(CHARACTER_IDS[i] + "_happy");
-            sleepBitmaps[i] = loadBitmap(CHARACTER_IDS[i] + "_sleep");
+            Bitmap idle = loadBitmap(CHARACTER_IDS[i] + "_idle");
+            Bitmap happy = loadBitmap(CHARACTER_IDS[i] + "_happy");
+            Bitmap sleep = loadBitmap(CHARACTER_IDS[i] + "_sleep");
+            if (PRIMARY_IS_HUMAN[i]) {
+                idleBitmaps[FORM_HUMAN][i] = idle;
+                happyBitmaps[FORM_HUMAN][i] = happy;
+                sleepBitmaps[FORM_HUMAN][i] = sleep;
+                idleBitmaps[FORM_PET][i] = loadBitmap(CHARACTER_IDS[i] + "_pet_idle");
+                happyBitmaps[FORM_PET][i] = firstBitmap(
+                        loadBitmap(CHARACTER_IDS[i] + "_pet_happy"), idleBitmaps[FORM_PET][i]);
+                sleepBitmaps[FORM_PET][i] = firstBitmap(
+                        loadBitmap(CHARACTER_IDS[i] + "_pet_sleep"), idleBitmaps[FORM_PET][i]);
+                humanForm[i] = true;
+            } else {
+                idleBitmaps[FORM_PET][i] = idle;
+                happyBitmaps[FORM_PET][i] = happy;
+                sleepBitmaps[FORM_PET][i] = sleep;
+                idleBitmaps[FORM_HUMAN][i] = loadBitmap(CHARACTER_IDS[i] + "_human_idle");
+                happyBitmaps[FORM_HUMAN][i] = firstBitmap(
+                        loadBitmap(CHARACTER_IDS[i] + "_human_happy"), idleBitmaps[FORM_HUMAN][i]);
+                sleepBitmaps[FORM_HUMAN][i] = firstBitmap(
+                        loadBitmap(CHARACTER_IDS[i] + "_human_sleep"), idleBitmaps[FORM_HUMAN][i]);
+                humanForm[i] = false;
+            }
         }
     }
 
     public void setHost(Host host) {
         this.host = host;
+    }
+
+    void applyCompensationRotation(int clockwiseDegrees) {
+        int degrees = ((clockwiseDegrees % 360) + 360) % 360;
+        if (getWidth() > 0 && getHeight() > 0) {
+            setPivotX(getWidth() / 2f);
+            setPivotY(getHeight() / 2f);
+        }
+        if (Math.abs(getRotation() - degrees) > 0.5f) {
+            setRotation(degrees);
+        }
+    }
+
+    void collapsePanels() {
+        hideMenu();
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        setPivotX(w / 2f);
+        setPivotY(h / 2f);
     }
 
     @Override
@@ -99,7 +266,9 @@ public class OverlayPetView extends View {
             drawMenu(canvas);
         }
         drawPet(canvas);
-        if (System.currentTimeMillis() < bubbleUntil) {
+        if (pickerVisible) {
+            drawPicker(canvas);
+        } else if (System.currentTimeMillis() < bubbleUntil) {
             drawBubble(canvas);
         }
         postInvalidateOnAnimation();
@@ -107,13 +276,41 @@ public class OverlayPetView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        switch (event.getActionMasked()) {
+        scaleDetector.onTouchEvent(event);
+        int action = event.getActionMasked();
+        if (pinching || scaleDetector.isInProgress() || (scaledThisGesture && action != MotionEvent.ACTION_DOWN)) {
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                pinching = false;
+                scaledThisGesture = false;
+                pressing = false;
+                dragging = false;
+                handler.removeCallbacks(longPressRunnable);
+            }
+            return true;
+        }
+        gestureDetector.onTouchEvent(event);
+        switch (action) {
             case MotionEvent.ACTION_DOWN:
                 downX = event.getX();
                 downY = event.getY();
                 lastRawX = event.getRawX();
                 lastRawY = event.getRawY();
                 longPressTriggered = false;
+                scaledThisGesture = false;
+                pinching = false;
+                if (pickerVisible) {
+                    int character = characterAt(downX, downY);
+                    if (character >= 0) {
+                        selectCharacter(character);
+                        return true;
+                    }
+                    if (isInsidePickerPanel(downX, downY)) {
+                        showMenu();
+                        return true;
+                    }
+                    hideMenu();
+                    return true;
+                }
                 if (menuVisible) {
                     int item = menuItemAt(downX, downY);
                     if (item >= 0) {
@@ -128,6 +325,9 @@ public class OverlayPetView extends View {
                 }
                 return true;
             case MotionEvent.ACTION_MOVE:
+                if (event.getPointerCount() >= 2) {
+                    return true;
+                }
                 if (pressing && !longPressTriggered
                         && distance(event.getX(), event.getY(), downX, downY) > touchSlop) {
                     handler.removeCallbacks(longPressRunnable);
@@ -145,10 +345,6 @@ public class OverlayPetView extends View {
                 return true;
             case MotionEvent.ACTION_UP:
                 handler.removeCallbacks(longPressRunnable);
-                if (pressing && !dragging && !longPressTriggered) {
-                    updateStats(3, -1, -1);
-                    say(humanMode ? "嗨。" : "啾。");
-                }
                 pressing = false;
                 dragging = false;
                 return true;
@@ -171,29 +367,23 @@ public class OverlayPetView extends View {
     private void handleMenuAction(int index) {
         switch (index) {
             case 0:
-                characterIndex = (characterIndex + 1) % CHARACTER_IDS.length;
-                humanMode = true;
-                happiness = 82;
-                energy = Math.max(energy, 48);
-                say(CHARACTER_NAMES[characterIndex] + " " + (characterIndex + 1) + "/12");
-                break;
+                showPicker();
+                return;
             case 1:
-                humanMode = !humanMode;
-                say(humanMode ? "人形模式" : "企鵝模式");
+                humanForm[characterIndex] = !humanForm[characterIndex];
+                say(modeLabel());
                 break;
             case 2:
-                updateStats(8, -2, 20);
-                say("已餵食");
+                nap();
                 break;
             case 3:
-                updateStats(18, -14, -6);
-                say("一起玩");
+                if (host != null) {
+                    boolean stayOnTop = !host.isStayOnTop();
+                    host.setStayOnTop(stayOnTop);
+                    say(stayOnTop ? "保持置頂" : "已取消置頂");
+                }
                 break;
             case 4:
-                updateStats(4, 24, -2);
-                say("休息中");
-                break;
-            case 5:
                 if (host != null) {
                     host.closeOverlay();
                 }
@@ -204,16 +394,95 @@ public class OverlayPetView extends View {
         hideMenu();
     }
 
+    private void selectCharacter(int index) {
+        characterIndex = index;
+        happiness = 82;
+        energy = Math.max(energy, 48);
+        say(CHARACTER_NAMES[characterIndex] + " · " + modeLabel());
+        hideMenu();
+    }
+
+    private void showPicker() {
+        menuVisible = false;
+        pickerVisible = true;
+        if (host != null) {
+            host.setOverlayMode(MODE_PICKER);
+        }
+        invalidate();
+    }
+
+    private void showMenu() {
+        pickerVisible = false;
+        menuVisible = true;
+        if (host != null) {
+            host.setOverlayMode(MODE_MENU);
+        }
+        invalidate();
+    }
+
+    private boolean shouldIgnoreTap(MotionEvent event) {
+        return dragging || longPressTriggered || scaledThisGesture || menuVisible || pickerVisible
+                || !isInsidePet(event.getX(), event.getY());
+    }
+
+    private void greet() {
+        updateStats(3, -1, -1);
+        say(humanForm[characterIndex] ? "嗨。" : PET_CHAT[characterIndex]);
+    }
+
+    private void cheer() {
+        handler.removeCallbacks(longPressRunnable);
+        pressing = false;
+        napUntil = 0;
+        cheerUntil = System.currentTimeMillis() + CHEER_DURATION_MS;
+        updateStats(12, -4, -2);
+        bubble = humanForm[characterIndex] ? CHEER_LINES[characterIndex] : PET_CHEER[characterIndex];
+        bubbleUntil = System.currentTimeMillis() + 2400;
+        invalidate();
+    }
+
+    private float cheerHop() {
+        long now = System.currentTimeMillis();
+        if (now >= cheerUntil) {
+            return 0;
+        }
+        float elapsed = (CHEER_DURATION_MS - (cheerUntil - now)) / 1000f;
+        if (elapsed >= 1.2f) {
+            return 0;
+        }
+        return Math.abs((float) Math.sin(elapsed * Math.PI * 3.5)) * dp(16) * Math.max(0f, 1f - elapsed / 1.2f);
+    }
+
+    private void nap() {
+        cheerUntil = 0;
+        napUntil = System.currentTimeMillis() + NAP_DURATION_MS;
+        bubble = humanForm[characterIndex] ? SLEEP_LINES[characterIndex] : PET_SLEEP[characterIndex];
+        bubbleUntil = System.currentTimeMillis() + 2400;
+        invalidate();
+    }
+
+    private void applySizeLevel(int level) {
+        if (level == sizeLevel) {
+            return;
+        }
+        sizeLevel = level;
+        if (host != null) {
+            host.setSizeLevel(sizeLevel);
+        }
+        say("大小 " + (sizeLevel + 1) + "/" + SIZE_LEVEL_COUNT);
+        invalidate();
+    }
+
     private void drawPet(Canvas canvas) {
         Bitmap bitmap = currentBitmap();
         float size = petSize();
         float left = getWidth() - size - dp(12);
-        float top = getHeight() - size - dp(8);
+        float top = getHeight() - size - dp(8) - cheerHop();
         paint.setColor(Color.argb(100, 0, 0, 0));
         rect.set(left + size * 0.22f, top + size * 0.84f, left + size * 0.86f, top + size * 0.96f);
         canvas.drawOval(rect, paint);
         paint.setAlpha(255);
-        if (humanMode && bitmap != null) {
+        if (bitmap != null) {
             rect.set(left, top, left + size, top + size);
             canvas.drawBitmap(bitmap, null, rect, paint);
         } else {
@@ -262,7 +531,7 @@ public class OverlayPetView extends View {
             paint.setTextAlign(Paint.Align.LEFT);
             paint.setTypeface(Typeface.DEFAULT_BOLD);
             paint.setTextSize(dp(15));
-            canvas.drawText(MENU_LABELS[i], left + dp(56), rowTop + itemHeight * 0.62f, paint);
+            canvas.drawText(menuLabel(i), left + dp(56), rowTop + itemHeight * 0.62f, paint);
             paint.setTypeface(Typeface.DEFAULT);
         }
     }
@@ -270,9 +539,8 @@ public class OverlayPetView extends View {
     private void drawMenuGlyph(Canvas canvas, float x, float y, int index) {
         int color = index == 0 ? Color.rgb(81, 156, 255)
                 : index == 1 ? Color.rgb(255, 193, 87)
-                : index == 2 ? Color.rgb(84, 224, 139)
-                : index == 3 ? Color.rgb(178, 145, 255)
-                : index == 4 ? Color.rgb(120, 205, 255)
+                : index == 2 ? Color.rgb(164, 148, 255)
+                : index == 3 ? Color.rgb(80, 196, 186)
                 : Color.rgb(255, 100, 100);
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(color);
@@ -281,9 +549,76 @@ public class OverlayPetView extends View {
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setTypeface(Typeface.DEFAULT_BOLD);
         paint.setTextSize(dp(13));
-        canvas.drawText(index == 5 ? "X" : MENU_LABELS[index].substring(0, 1), x, y + dp(5), paint);
+        String glyph = index == MENU_LABELS.length - 1 ? "X" : menuLabel(index).substring(0, 1);
+        canvas.drawText(glyph, x, y + dp(5), paint);
         paint.setTypeface(Typeface.DEFAULT);
         paint.setTextAlign(Paint.Align.LEFT);
+    }
+
+    private void drawPicker(Canvas canvas) {
+        float panelLeft = pickerLeft();
+        float panelTop = pickerTop();
+        float panelWidth = pickerPanelWidth();
+        float gap = pickerGap();
+        float innerLeft = pickerInnerLeft();
+        float innerTop = pickerInnerTop();
+        float cellW = pickerCellWidth();
+        float cellH = pickerCellHeight();
+        float thumb = pickerThumbSize();
+        float panelHeight = pickerPanelHeight();
+
+        paint.setStyle(Paint.Style.FILL);
+        paint.setShader(new LinearGradient(0, panelTop, 0, panelTop + panelHeight,
+                Color.argb(244, 45, 46, 52), Color.argb(244, 20, 21, 25), Shader.TileMode.CLAMP));
+        rect.set(panelLeft, panelTop, panelLeft + panelWidth, panelTop + panelHeight);
+        canvas.drawRoundRect(rect, dp(22), dp(22), paint);
+        paint.setShader(null);
+
+        paint.setColor(Color.WHITE);
+        paint.setTextAlign(Paint.Align.CENTER);
+        paint.setTypeface(Typeface.DEFAULT_BOLD);
+        paint.setTextSize(dp(15));
+        canvas.drawText("選擇角色", panelLeft + panelWidth * 0.5f, panelTop + dp(24), paint);
+        paint.setTypeface(Typeface.DEFAULT);
+        paint.setTextSize(dp(11));
+        paint.setColor(Color.argb(180, 200, 205, 215));
+        canvas.drawText("點選頭像切換  ·  點標題返回", panelLeft + panelWidth * 0.5f, panelTop + dp(40), paint);
+
+        for (int i = 0; i < CHARACTER_IDS.length; i++) {
+            int col = i % PICKER_COLS;
+            int row = i / PICKER_COLS;
+            float cellLeft = innerLeft + col * (cellW + gap);
+            float cellTop = innerTop + row * (cellH + gap);
+            boolean selected = i == characterIndex;
+            if (selected) {
+                paint.setStyle(Paint.Style.FILL);
+                paint.setColor(Color.argb(90, 81, 156, 255));
+                rect.set(cellLeft, cellTop, cellLeft + cellW, cellTop + cellH);
+                canvas.drawRoundRect(rect, dp(16), dp(16), paint);
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(dp(2));
+                paint.setColor(Color.rgb(120, 180, 255));
+                canvas.drawRoundRect(rect, dp(16), dp(16), paint);
+                paint.setStyle(Paint.Style.FILL);
+                paint.setStrokeWidth(0);
+            }
+            paint.setAlpha(255);
+            float thumbLeft = cellLeft + (cellW - thumb) * 0.5f;
+            float thumbTop = cellTop + dp(4);
+            rect.set(thumbLeft, thumbTop, thumbLeft + thumb, thumbTop + thumb);
+            Bitmap bitmap = rosterBitmap(i);
+            if (bitmap != null) {
+                canvas.drawBitmap(bitmap, null, rect, paint);
+            }
+            paint.setColor(selected ? Color.rgb(168, 206, 255) : Color.WHITE);
+            paint.setTextAlign(Paint.Align.CENTER);
+            paint.setTypeface(selected ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+            paint.setTextSize(dp(11));
+            canvas.drawText(CHARACTER_NAMES[i], cellLeft + cellW * 0.5f, thumbTop + thumb + dp(14), paint);
+        }
+        paint.setTypeface(Typeface.DEFAULT);
+        paint.setTextAlign(Paint.Align.LEFT);
+        paint.setAlpha(255);
     }
 
     private void drawBubble(Canvas canvas) {
@@ -315,6 +650,36 @@ public class OverlayPetView extends View {
         return index >= 0 && index < MENU_LABELS.length ? index : -1;
     }
 
+    private int characterAt(float x, float y) {
+        float gap = pickerGap();
+        float innerLeft = pickerInnerLeft();
+        float innerTop = pickerInnerTop();
+        float cellW = pickerCellWidth();
+        float cellH = pickerCellHeight();
+        if (x < innerLeft || y < innerTop) {
+            return -1;
+        }
+        int col = (int) ((x - innerLeft) / (cellW + gap));
+        int row = (int) ((y - innerTop) / (cellH + gap));
+        if (col < 0 || col >= PICKER_COLS || row < 0 || row >= PICKER_ROWS) {
+            return -1;
+        }
+        float cellLeft = innerLeft + col * (cellW + gap);
+        float cellTop = innerTop + row * (cellH + gap);
+        if (x > cellLeft + cellW || y > cellTop + cellH) {
+            return -1;
+        }
+        int index = row * PICKER_COLS + col;
+        return index < CHARACTER_IDS.length ? index : -1;
+    }
+
+    private boolean isInsidePickerPanel(float x, float y) {
+        float left = pickerLeft();
+        float top = pickerTop();
+        return x >= left && x <= left + pickerPanelWidth()
+                && y >= top && y <= top + pickerPanelHeight();
+    }
+
     private boolean isInsidePet(float x, float y) {
         float size = petSize();
         float left = getWidth() - size - dp(12);
@@ -323,13 +688,15 @@ public class OverlayPetView extends View {
     }
 
     private void hideMenu() {
-        if (menuVisible) {
-            menuVisible = false;
-            if (host != null) {
-                host.setMenuExpanded(false);
-            }
-            invalidate();
+        if (!menuVisible && !pickerVisible) {
+            return;
         }
+        menuVisible = false;
+        pickerVisible = false;
+        if (host != null) {
+            host.setOverlayMode(MODE_COMPACT);
+        }
+        invalidate();
     }
 
     private void say(String text) {
@@ -346,13 +713,38 @@ public class OverlayPetView extends View {
     }
 
     private Bitmap currentBitmap() {
-        if (energy < 34 && sleepBitmaps[characterIndex] != null) {
-            return sleepBitmaps[characterIndex];
+        int form = humanForm[characterIndex] ? FORM_HUMAN : FORM_PET;
+        int i = characterIndex;
+        if (System.currentTimeMillis() < cheerUntil && happyBitmaps[form][i] != null) {
+            return happyBitmaps[form][i];
         }
-        if (happiness > 78 && happyBitmaps[characterIndex] != null) {
-            return happyBitmaps[characterIndex];
+        if (System.currentTimeMillis() < napUntil && sleepBitmaps[form][i] != null) {
+            return sleepBitmaps[form][i];
         }
-        return idleBitmaps[characterIndex];
+        if (energy < 34 && sleepBitmaps[form][i] != null) {
+            return sleepBitmaps[form][i];
+        }
+        if (happiness > 78 && happyBitmaps[form][i] != null) {
+            return happyBitmaps[form][i];
+        }
+        if (idleBitmaps[form][i] != null) {
+            return idleBitmaps[form][i];
+        }
+        return rosterBitmap(i);
+    }
+
+    private Bitmap rosterBitmap(int index) {
+        return PRIMARY_IS_HUMAN[index]
+                ? idleBitmaps[FORM_HUMAN][index]
+                : idleBitmaps[FORM_PET][index];
+    }
+
+    private String modeLabel() {
+        return humanForm[characterIndex] ? "人形模式" : PET_MODE_NAMES[characterIndex];
+    }
+
+    private Bitmap firstBitmap(Bitmap preferred, Bitmap fallback) {
+        return preferred != null ? preferred : fallback;
     }
 
     private Bitmap loadBitmap(String name) {
@@ -364,8 +756,63 @@ public class OverlayPetView extends View {
         return Math.min(getWidth(), getHeight()) * 0.9f;
     }
 
+    private String menuLabel(int index) {
+        if (index == 3) {
+            boolean stayOnTop = host == null || host.isStayOnTop();
+            return stayOnTop ? "取消置頂" : "保持置頂";
+        }
+        return MENU_LABELS[index];
+    }
+
     private float menuItemHeight() {
         return dp(46);
+    }
+
+    private float pickerLeft() {
+        return dp(8);
+    }
+
+    private float pickerTop() {
+        return dp(8);
+    }
+
+    private float pickerPanelWidth() {
+        return getWidth() - dp(16);
+    }
+
+    private float pickerTitleHeight() {
+        return dp(48);
+    }
+
+    private float pickerGap() {
+        return dp(6);
+    }
+
+    private float pickerInnerLeft() {
+        return pickerLeft() + dp(10);
+    }
+
+    private float pickerInnerTop() {
+        return pickerTop() + pickerTitleHeight();
+    }
+
+    private float pickerCellWidth() {
+        return (pickerPanelWidth() - dp(20) - pickerGap() * (PICKER_COLS - 1)) / PICKER_COLS;
+    }
+
+    private float pickerThumbSize() {
+        return pickerCellWidth() * 0.78f;
+    }
+
+    private float pickerCellHeight() {
+        return pickerThumbSize() + dp(22);
+    }
+
+    private float pickerPanelHeight() {
+        return pickerTitleHeight()
+                + pickerCellHeight() * PICKER_ROWS
+                + pickerGap() * (PICKER_ROWS - 1)
+                + dp(12);
     }
 
     private float distance(float ax, float ay, float bx, float by) {

@@ -83,6 +83,16 @@ public class MainActivity extends Activity {
         });
         root.addView(startButton);
 
+        final boolean stayOnTop = OverlayPetService.isStayOnTop(this);
+        Button pinButton = makeButton(getString(stayOnTop ? R.string.stay_on_top_on : R.string.stay_on_top_off));
+        pinButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                toggleStayOnTop();
+            }
+        });
+        root.addView(pinButton);
+
         Button stopButton = makeButton(getString(R.string.stop_pet_button));
         stopButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -116,6 +126,18 @@ public class MainActivity extends Activity {
                     Uri.parse("package:" + getPackageName()));
             startActivityForResult(intent, OVERLAY_PERMISSION_REQUEST);
         }
+    }
+
+    private void toggleStayOnTop() {
+        boolean next = !OverlayPetService.isStayOnTop(this);
+        OverlayPetService.saveStayOnTop(this, next);
+        if (OverlayPetService.running) {
+            Intent intent = new Intent(this, OverlayPetService.class);
+            intent.setAction(OverlayPetService.ACTION_SET_STAY_ON_TOP);
+            intent.putExtra(OverlayPetService.EXTRA_STAY_ON_TOP, next);
+            startService(intent);
+        }
+        renderLauncher();
     }
 
     private void startPetOverlay() {

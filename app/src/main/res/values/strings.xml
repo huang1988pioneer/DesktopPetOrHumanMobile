@@ -5,4 +5,10 @@
     <string name="overlay_permission_button">開啟上層顯示權限</string>
     <string name="start_pet_button">啟動桌寵</string>
     <string name="stop_pet_button">停止桌寵</string>
+    <string name="stay_on_top_on">最上層置頂：開</string>
+    <string name="stay_on_top_off">最上層置頂：關</string>
+    <string name="notification_on_top">桌寵正在顯示於其他 App 上層</string>
+    <string name="notification_not_on_top">桌寵未置頂，不會蓋住其他 App</string>
+    <string name="action_unpin">取消置頂</string>
+    <string name="action_pin">保持置頂</string>
 </resources>
