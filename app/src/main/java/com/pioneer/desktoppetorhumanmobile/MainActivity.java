@@ -74,6 +74,16 @@ public class MainActivity extends Activity {
         });
         root.addView(permissionButton);
 
+        Button restrictedButton = makeButton(getString(R.string.restricted_settings_button));
+        restrictedButton.setVisibility(hasUsageAccess() ? View.GONE : View.VISIBLE);
+        restrictedButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                openAppDetailsSettings();
+            }
+        });
+        root.addView(restrictedButton);
+
         Button usageButton = makeButton(getString(R.string.usage_access_button));
         usageButton.setVisibility(hasUsageAccess() ? View.GONE : View.VISIBLE);
         usageButton.setOnClickListener(new View.OnClickListener() {
@@ -161,23 +171,24 @@ public class MainActivity extends Activity {
         renderLauncher();
     }
 
+    private void openAppDetailsSettings() {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        intent.setData(Uri.parse("package:" + getPackageName()));
+        startActivity(intent);
+    }
+
     private void requestUsageAccess() {
         Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
-        intent.setData(Uri.parse("package:" + getPackageName()));
         try {
             startActivity(intent);
         } catch (Exception ignored) {
-            startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
+            openAppDetailsSettings();
         }
     }
 
     private void startPetOverlay() {
         if (!hasOverlayPermission()) {
             requestOverlayPermission();
-            return;
-        }
-        if (!hasUsageAccess()) {
-            requestUsageAccess();
             return;
         }
         Intent intent = new Intent(this, OverlayPetService.class);
