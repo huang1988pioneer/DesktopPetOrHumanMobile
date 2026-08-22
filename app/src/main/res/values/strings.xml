@@ -1,4 +1,8 @@
 <resources>
     <string name="app_name">Desktop Pet Or Human</string>
+    <string name="overlay_permission_title">讓桌寵出現在桌面上</string>
+    <string name="overlay_permission_body">請允許「顯示在其他應用程式上層」。允許後回到此 App，桌寵會浮在你的 One UI Home 桌面與其他 App 上。</string>
+    <string name="overlay_permission_button">開啟上層顯示權限</string>
+    <string name="start_pet_button">啟動桌寵</string>
+    <string name="stop_pet_button">停止桌寵</string>
 </resources>
-
