@@ -13,6 +13,9 @@ import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -59,31 +62,6 @@ public class OverlayPetView extends View {
             "白貓模式", "三花模式", "貓咪模式", "兔子模式",
             "兔子模式", "黑貓模式", "紅貓模式", "海豚模式"
     };
-    private static final String[] PET_CHAT = {
-            "喵。", "汪。", "啾。", "喵。",
-            "喵。", "喵。", "喵。", "蹦。",
-            "蹦。", "喵。", "喵。", "噗。"
-    };
-    private static final String[] CHEER_LINES = {
-            "做得好！", "哈哈，被你逗樂了", "ガガガ！好開心", "金元寶來了！",
-            "喵嗚！好開心", "嘿嘿，再摸一下！", "喵喵！最喜歡你了", "耶嘿！超有精神",
-            "耶！今天也超讚", "有被鼓勵到…", "呵呵，好開心", "尾巴都在搖了！"
-    };
-    private static final String[] PET_CHEER = {
-            "喵嗚！", "汪汪！", "ガガ！", "喵！",
-            "喵嗚！", "喵喵！", "喵！", "蹦蹦！",
-            "蹦！", "喵！", "喵嗚！", "噗噗！"
-    };
-    private static final String[] SLEEP_LINES = {
-            "午休十分鐘，別吵", "先瞇一下，別吵", "企鵝要站著睡了…Zzz", "賺飽了，先睡一波",
-            "白白想睡了…", "布布先趴一下…", "喵娘要捲成一團了", "才沒有累…只是躺一下",
-            "先喝口茶再睡…", "先閉一下眼…", "蓋好被子，晚安", "縮回貝殼裡睡一下"
-    };
-    private static final String[] PET_SLEEP = {
-            "呼…", "呼…", "Zzz…", "呼喵…",
-            "呼喵…", "呼喵…", "呼喵…", "呼…",
-            "呼…", "呼…", "呼喵…", "呼…"
-    };
     private static final long CHEER_DURATION_MS = 3000;
     private static final long NAP_DURATION_MS = 3000;
     private static final int FORM_HUMAN = 0;
@@ -118,6 +96,13 @@ public class OverlayPetView extends View {
             }
         }
     };
+    private final Runnable idleTalkRunnable = new Runnable() {
+        @Override
+        public void run() {
+            maybeIdleTalk();
+            handler.postDelayed(this, 8500);
+        }
+    };
 
     private Host host;
     private int characterIndex;
@@ -143,6 +128,8 @@ public class OverlayPetView extends View {
     private long bubbleUntil;
     private long cheerUntil;
     private long napUntil;
+    private int idleTick;
+    private boolean closing;
 
     public OverlayPetView(Context context) {
         super(context);
@@ -260,8 +247,17 @@ public class OverlayPetView extends View {
     }
 
     @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        handler.removeCallbacks(idleTalkRunnable);
+        handler.postDelayed(idleTalkRunnable, 8500);
+        say(CharacterTalk.greeting(characterIndex), 3200);
+    }
+
+    @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+        idleTick++;
         if (menuVisible) {
             drawMenu(canvas);
         }
@@ -361,6 +357,7 @@ public class OverlayPetView extends View {
     @Override
     protected void onDetachedFromWindow() {
         handler.removeCallbacks(longPressRunnable);
+        handler.removeCallbacks(idleTalkRunnable);
         super.onDetachedFromWindow();
     }
 
@@ -384,10 +381,8 @@ public class OverlayPetView extends View {
                 }
                 break;
             case 4:
-                if (host != null) {
-                    host.closeOverlay();
-                }
-                break;
+                beginFarewell();
+                return;
             default:
                 break;
         }
@@ -398,7 +393,7 @@ public class OverlayPetView extends View {
         characterIndex = index;
         happiness = 82;
         energy = Math.max(energy, 48);
-        say(CHARACTER_NAMES[characterIndex] + " · " + modeLabel());
+        say(CharacterTalk.greeting(characterIndex), 3200);
         hideMenu();
     }
 
@@ -427,7 +422,7 @@ public class OverlayPetView extends View {
 
     private void greet() {
         updateStats(3, -1, -1);
-        say(humanForm[characterIndex] ? "嗨。" : PET_CHAT[characterIndex]);
+        say(CharacterTalk.idle(characterIndex), 2400);
     }
 
     private void cheer() {
@@ -436,9 +431,7 @@ public class OverlayPetView extends View {
         napUntil = 0;
         cheerUntil = System.currentTimeMillis() + CHEER_DURATION_MS;
         updateStats(12, -4, -2);
-        bubble = humanForm[characterIndex] ? CHEER_LINES[characterIndex] : PET_CHEER[characterIndex];
-        bubbleUntil = System.currentTimeMillis() + 2400;
-        invalidate();
+        say(CharacterTalk.cheer(characterIndex), 2400);
     }
 
     private float cheerHop() {
@@ -456,9 +449,45 @@ public class OverlayPetView extends View {
     private void nap() {
         cheerUntil = 0;
         napUntil = System.currentTimeMillis() + NAP_DURATION_MS;
-        bubble = humanForm[characterIndex] ? SLEEP_LINES[characterIndex] : PET_SLEEP[characterIndex];
-        bubbleUntil = System.currentTimeMillis() + 2400;
-        invalidate();
+        say(CharacterTalk.sleep(characterIndex), 2400);
+    }
+
+    private void beginFarewell() {
+        if (closing) {
+            return;
+        }
+        closing = true;
+        hideMenu();
+        say(CharacterTalk.farewell(characterIndex), 2400);
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (host != null) {
+                    host.closeOverlay();
+                }
+            }
+        }, 1800);
+    }
+
+    boolean speakAboutApp(String packageName, String appName, boolean opened) {
+        if (closing || menuVisible || pickerVisible || getVisibility() != VISIBLE) {
+            return false;
+        }
+        String key = CHARACTER_IDS[characterIndex];
+        String kind = AppTalk.kindOf(packageName);
+        String line = opened ? AppTalk.forOpen(key, appName, kind) : AppTalk.forClose(key, appName, kind);
+        say(line, 3400);
+        return true;
+    }
+
+    private void maybeIdleTalk() {
+        if (closing || menuVisible || pickerVisible || getVisibility() != VISIBLE) {
+            return;
+        }
+        if (System.currentTimeMillis() < bubbleUntil) {
+            return;
+        }
+        say(CharacterTalk.idle(characterIndex), 2400);
     }
 
     private void applySizeLevel(int level) {
@@ -478,6 +507,18 @@ public class OverlayPetView extends View {
         float size = petSize();
         float left = getWidth() - size - dp(12);
         float top = getHeight() - size - dp(8) - cheerHop();
+        float breathe = 1f + (float) Math.sin(idleTick / 9.0) * 0.018f;
+        float tilt = (float) Math.sin(idleTick / 15.0) * 2.3f;
+        if (dragging) {
+            tilt *= 2f;
+        }
+        canvas.save();
+        float cx = left + size * 0.5f;
+        float cy = top + size * 0.5f;
+        canvas.translate(cx, cy);
+        canvas.rotate(tilt);
+        canvas.scale(breathe, 1f / breathe);
+        canvas.translate(-cx, -cy);
         paint.setColor(Color.argb(100, 0, 0, 0));
         rect.set(left + size * 0.22f, top + size * 0.84f, left + size * 0.86f, top + size * 0.96f);
         canvas.drawOval(rect, paint);
@@ -488,6 +529,7 @@ public class OverlayPetView extends View {
         } else {
             drawFallbackPet(canvas, left, top, size);
         }
+        canvas.restore();
     }
 
     private void drawFallbackPet(Canvas canvas, float left, float top, float size) {
@@ -622,19 +664,46 @@ public class OverlayPetView extends View {
     }
 
     private void drawBubble(Canvas canvas) {
+        if (bubble == null || bubble.length() == 0) {
+            return;
+        }
         float size = petSize();
-        float bubbleWidth = Math.max(dp(74), paint.measureText(bubble) + dp(34));
+        paint.setTextSize(dp(14));
+        paint.setTypeface(Typeface.DEFAULT);
+        paint.setTextAlign(Paint.Align.LEFT);
+        TextPaint textPaint = new TextPaint(paint);
+        textPaint.setColor(Color.rgb(28, 31, 36));
+        int maxWidth = dp(168);
+        StaticLayout layout = StaticLayout.Builder
+                .obtain(bubble, 0, bubble.length(), textPaint, maxWidth)
+                .setAlignment(Layout.Alignment.ALIGN_CENTER)
+                .setLineSpacing(0, 1f)
+                .build();
+        float textWidth = 0;
+        for (int i = 0; i < layout.getLineCount(); i++) {
+            textWidth = Math.max(textWidth, layout.getLineWidth(i));
+        }
+        float bubbleWidth = Math.max(dp(74), textWidth + dp(34));
+        float bubbleHeight = layout.getHeight() + dp(20);
         float left = getWidth() - size - dp(36);
-        float top = getHeight() - size - dp(44);
+        if (left + bubbleWidth > getWidth() - dp(8)) {
+            left = getWidth() - bubbleWidth - dp(8);
+        }
+        if (left < dp(8)) {
+            left = dp(8);
+        }
+        float top = getHeight() - size - bubbleHeight - dp(10) - cheerHop();
+        if (top < dp(8)) {
+            top = dp(8);
+        }
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.argb(236, 255, 255, 255));
-        rect.set(left, top, left + bubbleWidth, top + dp(38));
+        rect.set(left, top, left + bubbleWidth, top + bubbleHeight);
         canvas.drawRoundRect(rect, dp(17), dp(17), paint);
-        paint.setColor(Color.rgb(28, 31, 36));
-        paint.setTextSize(dp(14));
-        paint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText(bubble, left + bubbleWidth * 0.5f, top + dp(25), paint);
-        paint.setTextAlign(Paint.Align.LEFT);
+        canvas.save();
+        canvas.translate(left + (bubbleWidth - maxWidth) * 0.5f, top + dp(10));
+        layout.draw(canvas);
+        canvas.restore();
     }
 
     private int menuItemAt(float x, float y) {
@@ -700,8 +769,12 @@ public class OverlayPetView extends View {
     }
 
     private void say(String text) {
+        say(text, 1800);
+    }
+
+    private void say(String text, long durationMs) {
         bubble = text;
-        bubbleUntil = System.currentTimeMillis() + 1800;
+        bubbleUntil = System.currentTimeMillis() + durationMs;
         invalidate();
     }
 

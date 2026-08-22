@@ -2,6 +2,7 @@ package com.pioneer.desktoppetorhumanmobile;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AppOpsManager;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
@@ -73,6 +74,16 @@ public class MainActivity extends Activity {
         });
         root.addView(permissionButton);
 
+        Button usageButton = makeButton(getString(R.string.usage_access_button));
+        usageButton.setVisibility(hasUsageAccess() ? View.GONE : View.VISIBLE);
+        usageButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                requestUsageAccess();
+            }
+        });
+        root.addView(usageButton);
+
         Button startButton = makeButton(getString(R.string.start_pet_button));
         startButton.setEnabled(hasOverlayPermission());
         startButton.setOnClickListener(new View.OnClickListener() {
@@ -120,6 +131,16 @@ public class MainActivity extends Activity {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this);
     }
 
+    private boolean hasUsageAccess() {
+        AppOpsManager appOps = (AppOpsManager) getSystemService(APP_OPS_SERVICE);
+        if (appOps == null) {
+            return false;
+        }
+        int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
+                android.os.Process.myUid(), getPackageName());
+        return mode == AppOpsManager.MODE_ALLOWED;
+    }
+
     private void requestOverlayPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -140,9 +161,23 @@ public class MainActivity extends Activity {
         renderLauncher();
     }
 
+    private void requestUsageAccess() {
+        Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+        intent.setData(Uri.parse("package:" + getPackageName()));
+        try {
+            startActivity(intent);
+        } catch (Exception ignored) {
+            startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
+        }
+    }
+
     private void startPetOverlay() {
         if (!hasOverlayPermission()) {
             requestOverlayPermission();
+            return;
+        }
+        if (!hasUsageAccess()) {
+            requestUsageAccess();
             return;
         }
         Intent intent = new Intent(this, OverlayPetService.class);

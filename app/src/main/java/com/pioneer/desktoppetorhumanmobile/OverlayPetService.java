@@ -1,13 +1,18 @@
 package com.pioneer.desktoppetorhumanmobile;
 
+import android.app.AppOpsManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.app.usage.UsageEvents;
+import android.app.usage.UsageStatsManager;
 import android.content.ComponentCallbacks;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
@@ -47,7 +52,18 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
     private int physicalSnap;
     private DisplayManager displayManager;
     private OrientationEventListener orientationListener;
+    private String lastForegroundPackage = "";
+    private long lastAppSpeakAt;
+    private boolean appWatchWarm = true;
+    private final java.util.ArrayDeque<AppTalkItem> pendingAppTalks = new java.util.ArrayDeque<>();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Runnable appWatchRunnable = new Runnable() {
+        @Override
+        public void run() {
+            pollForegroundApp();
+            mainHandler.postDelayed(this, 900);
+        }
+    };
     private final DisplayManager.DisplayListener displayListener = new DisplayManager.DisplayListener() {
         @Override
         public void onDisplayAdded(int displayId) {
@@ -106,6 +122,7 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
             orientationListener.enable();
         }
         syncScreenRotation(true);
+        mainHandler.postDelayed(appWatchRunnable, 4500);
     }
 
     @Override
@@ -124,6 +141,7 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
     @Override
     public void onDestroy() {
         running = false;
+        mainHandler.removeCallbacks(appWatchRunnable);
         if (orientationListener != null) {
             orientationListener.disable();
         }
@@ -368,6 +386,173 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
                         togglePending)
                 .setOngoing(true)
                 .build();
+    }
+
+    private void pollForegroundApp() {
+        if (!stayOnTop || petView == null || petView.getVisibility() != View.VISIBLE || !hasUsageAccess()) {
+            return;
+        }
+        String foreground = readForegroundPackage();
+        if (foreground == null) {
+            return;
+        }
+        if (appWatchWarm) {
+            lastForegroundPackage = foreground;
+            appWatchWarm = false;
+            return;
+        }
+        if (!foreground.equals(lastForegroundPackage)) {
+            String previous = lastForegroundPackage;
+            lastForegroundPackage = foreground;
+            if (!shouldIgnorePackage(previous)) {
+                enqueueAppTalk(previous, false);
+            }
+            if (!shouldIgnorePackage(foreground)) {
+                enqueueAppTalk(foreground, true);
+            }
+        }
+        flushPendingAppTalk();
+    }
+
+    private void enqueueAppTalk(String packageName, boolean opened) {
+        if (packageName == null || packageName.length() == 0 || shouldIgnorePackage(packageName)) {
+            return;
+        }
+        java.util.Iterator<AppTalkItem> existing = pendingAppTalks.iterator();
+        while (existing.hasNext()) {
+            AppTalkItem item = existing.next();
+            if (item.opened == opened && item.packageName.equals(packageName)) {
+                return;
+            }
+        }
+        if (pendingAppTalks.size() >= 4) {
+            pendingAppTalks.removeFirst();
+        }
+        pendingAppTalks.addLast(new AppTalkItem(packageName, opened));
+    }
+
+    private void flushPendingAppTalk() {
+        if (pendingAppTalks.isEmpty()) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastAppSpeakAt < 3500) {
+            return;
+        }
+        AppTalkItem next = pendingAppTalks.peekFirst();
+        if (next == null) {
+            return;
+        }
+        if (!petView.speakAboutApp(next.packageName, labelFor(next.packageName), next.opened)) {
+            return;
+        }
+        pendingAppTalks.removeFirst();
+        lastAppSpeakAt = now;
+    }
+
+    private static final class AppTalkItem {
+        final String packageName;
+        final boolean opened;
+
+        AppTalkItem(String packageName, boolean opened) {
+            this.packageName = packageName;
+            this.opened = opened;
+        }
+    }
+
+    private String readForegroundPackage() {
+        UsageStatsManager manager = (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
+        if (manager == null) {
+            return null;
+        }
+        long now = System.currentTimeMillis();
+        String resumedPackage = null;
+        long resumedAt = 0;
+        String leftPackage = null;
+        long leftAt = 0;
+        UsageEvents events = manager.queryEvents(now - 15000, now);
+        UsageEvents.Event event = new UsageEvents.Event();
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event);
+            String packageName = event.getPackageName();
+            if (packageName == null || packageName.length() == 0) {
+                continue;
+            }
+            long time = event.getTimeStamp();
+            if (isResumeEvent(event) && time >= resumedAt) {
+                resumedPackage = packageName;
+                resumedAt = time;
+            }
+            if (isLeaveEvent(event) && time >= leftAt) {
+                leftPackage = packageName;
+                leftAt = time;
+            }
+        }
+        if (resumedPackage == null) {
+            return lastForegroundPackage;
+        }
+        if (leftPackage != null && leftPackage.equals(resumedPackage) && leftAt > resumedAt) {
+            return "";
+        }
+        return resumedPackage;
+    }
+
+    private boolean isResumeEvent(UsageEvents.Event event) {
+        int type = event.getEventType();
+        if (type == UsageEvents.Event.MOVE_TO_FOREGROUND) {
+            return true;
+        }
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                && type == UsageEvents.Event.ACTIVITY_RESUMED;
+    }
+
+    private boolean isLeaveEvent(UsageEvents.Event event) {
+        int type = event.getEventType();
+        if (type == UsageEvents.Event.MOVE_TO_BACKGROUND) {
+            return true;
+        }
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                && type == UsageEvents.Event.ACTIVITY_STOPPED;
+    }
+
+    private boolean hasUsageAccess() {
+        AppOpsManager appOps = (AppOpsManager) getSystemService(APP_OPS_SERVICE);
+        if (appOps == null) {
+            return false;
+        }
+        int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
+                android.os.Process.myUid(), getPackageName());
+        return mode == AppOpsManager.MODE_ALLOWED;
+    }
+
+    private boolean shouldIgnorePackage(String packageName) {
+        if (packageName == null || packageName.length() == 0 || packageName.equals(getPackageName())) {
+            return true;
+        }
+        String lower = packageName.toLowerCase();
+        return lower.contains("launcher")
+                || lower.contains("systemui")
+                || lower.equals("com.android.settings")
+                || lower.contains("permissioncontroller")
+                || lower.contains("inputmethod")
+                || lower.contains("packageinstaller")
+                || lower.contains("oneuihome")
+                || lower.contains("incallui")
+                || lower.contains("samsung.android.app.cocktailbarservice");
+    }
+
+    private String labelFor(String packageName) {
+        try {
+            PackageManager packages = getPackageManager();
+            ApplicationInfo info = packages.getApplicationInfo(packageName, 0);
+            CharSequence label = packages.getApplicationLabel(info);
+            if (label != null && label.length() > 0) {
+                return label.toString();
+            }
+        } catch (PackageManager.NameNotFoundException ignored) {
+        }
+        int dot = packageName.lastIndexOf('.');
+        return dot >= 0 && dot + 1 < packageName.length() ? packageName.substring(dot + 1) : packageName;
     }
 
     private int dp(int value) {
