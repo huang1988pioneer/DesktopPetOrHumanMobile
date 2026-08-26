@@ -1,5 +1,7 @@
 package com.pioneer.desktoppetorhumanmobile;
 
+import java.util.Locale;
+
 final class AppTalk {
     private AppTalk() {
     }
@@ -51,7 +53,7 @@ final class AppTalk {
     }
 
     static String kindOf(String packageName) {
-        String p = packageName.toLowerCase();
+        String p = packageName.toLowerCase(Locale.ROOT);
         if (equalsAny(p,
                 "com.android.chrome", "com.chrome.beta", "com.sec.android.app.sbrowser",
                 "com.duckduckgo.mobile.android", "org.mozilla.firefox", "com.brave.browser",

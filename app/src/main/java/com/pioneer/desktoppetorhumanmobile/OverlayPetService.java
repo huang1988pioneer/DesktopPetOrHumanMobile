@@ -9,7 +9,6 @@ import android.app.Service;
 import android.app.usage.UsageEvents;
 import android.app.usage.UsageStatsManager;
 import android.content.ComponentCallbacks;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -20,7 +19,9 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.provider.Settings;
 import android.view.Gravity;
+import android.view.Display;
 import android.view.OrientationEventListener;
 import android.view.View;
 import android.view.WindowManager;
@@ -59,6 +60,9 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
     private OrientationEventListener orientationListener;
     private UsageStatsManager usageStatsManager;
     private PetPreferences preferences;
+    private boolean windowAdded;
+    private boolean displayListenerRegistered;
+    private boolean componentCallbacksRegistered;
     private String lastForegroundPackage = "";
     private long lastAppSpeakAt;
     private long usageAccessCheckedAt;
@@ -91,7 +95,9 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
 
         @Override
         public void onDisplayChanged(int displayId) {
-            syncScreenRotation(false);
+            if (displayId == Display.DEFAULT_DISPLAY) {
+                syncScreenRotation(false);
+            }
         }
     };
     private final ComponentCallbacks configCallbacks = new ComponentCallbacks() {
@@ -111,6 +117,11 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         preferences = new PetPreferences(this);
         usageStatsManager = (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            running = false;
+            stopSelf();
+            return;
+        }
         running = true;
         stayOnTop = preferences.isStayOnTop();
         sizeLevel = validSizeLevel(preferences.sizeLevel(OverlayPetView.DEFAULT_SIZE_LEVEL));
@@ -121,8 +132,12 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
         addPetWindow();
         applyStayOnTop(stayOnTop);
         displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
-        displayManager.registerDisplayListener(displayListener, mainHandler);
+        if (displayManager != null) {
+            displayManager.registerDisplayListener(displayListener, mainHandler);
+            displayListenerRegistered = true;
+        }
         registerComponentCallbacks(configCallbacks);
+        componentCallbacksRegistered = true;
         orientationListener = new OrientationEventListener(this) {
             @Override
             public void onOrientationChanged(int orientation) {
@@ -145,6 +160,9 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (!running) {
+            return START_NOT_STICKY;
+        }
         if (intent != null && ACTION_SET_STAY_ON_TOP.equals(intent.getAction())) {
             applyStayOnTop(intent.getBooleanExtra(EXTRA_STAY_ON_TOP, true));
         }
@@ -168,13 +186,27 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
             orientationListener.disable();
         }
         if (displayManager != null) {
-            displayManager.unregisterDisplayListener(displayListener);
+            if (displayListenerRegistered) {
+                displayManager.unregisterDisplayListener(displayListener);
+                displayListenerRegistered = false;
+            }
         }
-        unregisterComponentCallbacks(configCallbacks);
-        if (petView != null) {
-            windowManager.removeView(petView);
+        if (componentCallbacksRegistered) {
+            unregisterComponentCallbacks(configCallbacks);
+            componentCallbacksRegistered = false;
+        }
+        if (petView != null && windowAdded) {
+            try {
+                if (windowManager != null) {
+                    windowManager.removeView(petView);
+                }
+            } catch (IllegalArgumentException ignored) {
+                // The system may remove an overlay while the service is stopping.
+            }
+            windowAdded = false;
             petView = null;
         }
+        stopForeground(true);
         super.onDestroy();
     }
 
@@ -290,6 +322,7 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
         petView = new OverlayPetView(this);
         petView.setHost(this);
         windowManager.addView(petView, params);
+        windowAdded = true;
     }
 
     private void rebuildSizes() {
@@ -301,8 +334,13 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
     }
 
     private void applyStayOnTop(boolean stay) {
+        boolean changed = stayOnTop != stay;
         stayOnTop = stay;
         preferences.saveStayOnTop(stay);
+        if (changed) {
+            pendingAppTalks.clear();
+            appWatchWarm = true;
+        }
         if (params == null || petView == null) {
             startForeground(NOTIFICATION_ID, createNotification());
             return;
@@ -464,6 +502,8 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
 
     private void pollForegroundApp() {
         if (!stayOnTop || petView == null || petView.getVisibility() != View.VISIBLE || !hasUsageAccess()) {
+            pendingAppTalks.clear();
+            appWatchWarm = true;
             return;
         }
         String foreground = readForegroundPackage();

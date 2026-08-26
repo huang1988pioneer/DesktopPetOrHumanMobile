@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AppOpsManager;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -28,9 +29,11 @@ public class MainActivity extends Activity {
         getWindow().setStatusBarColor(Color.rgb(248, 246, 241));
         getWindow().setNavigationBarColor(Color.rgb(248, 246, 241));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requestPermissions(new String[] {Manifest.permission.POST_NOTIFICATIONS}, 12);
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[] {Manifest.permission.POST_NOTIFICATIONS}, 12);
+            }
         }
-        renderLauncher();
     }
 
     @Override
