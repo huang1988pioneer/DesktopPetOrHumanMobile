@@ -43,29 +43,14 @@ public class OverlayPetView extends View {
         void closeOverlay();
     }
 
-    static final String[] CHARACTER_IDS = {
-            "fengge", "fengxiong", "gugugaga", "laowangmao",
-            "miaobaibai", "miaobubu", "miaoniang", "tuge",
-            "xiaotu", "xiaoying", "yamei", "yumei"
-    };
-    private static final String[] CHARACTER_NAMES = {
-            "鋒哥", "鋒兄", "咕咕嘎嘎", "老王貓",
-            "喵白白", "喵布布", "喵娘", "兔哥",
-            "小兔", "小影", "雅美", "玉美"
-    };
+    static final String[] CHARACTER_IDS = CharacterRoster.IDS;
+    private static final String[] CHARACTER_NAMES = CharacterRoster.NAMES;
     private static final String[] MENU_LABELS = {"角色", "模式", "睡一下", "取消置頂", "回到右下角", "關閉"};
-    private static final boolean[] PRIMARY_IS_HUMAN = {
-            true, true, false, false,
-            false, false, true, true,
-            true, true, true, true
-    };
-    private static final String[] PET_MODE_NAMES = {
-            "黑貓模式", "柴犬模式", "企鵝模式", "招財貓模式",
-            "白貓模式", "三花模式", "貓咪模式", "兔子模式",
-            "兔子模式", "黑貓模式", "紅貓模式", "海豚模式"
-    };
+    private static final boolean[] PRIMARY_IS_HUMAN = CharacterRoster.PRIMARY_IS_HUMAN;
+    private static final String[] PET_MODE_NAMES = CharacterRoster.PET_MODE_NAMES;
     private static final long CHEER_DURATION_MS = 3000;
     private static final long NAP_DURATION_MS = 3000;
+    private static final long ANIMATION_FRAME_DELAY_MS = 50;
     private static final int FORM_HUMAN = 0;
     private static final int FORM_PET = 1;
     static final int SIZE_LEVEL_COUNT = 5;
@@ -77,6 +62,7 @@ public class OverlayPetView extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final RectF rect = new RectF();
     private final Path path = new Path();
+    private final TextPaint bubbleTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
     private final Bitmap[][] idleBitmaps = new Bitmap[2][CHARACTER_IDS.length];
     private final Bitmap[][] happyBitmaps = new Bitmap[2][CHARACTER_IDS.length];
     private final Bitmap[][] sleepBitmaps = new Bitmap[2][CHARACTER_IDS.length];
@@ -107,6 +93,7 @@ public class OverlayPetView extends View {
     };
 
     private Host host;
+    private final PetPreferences preferences;
     private int characterIndex;
     private boolean menuVisible;
     private boolean pickerVisible;
@@ -128,14 +115,24 @@ public class OverlayPetView extends View {
     private int touchSlop;
     private String bubble = "";
     private long bubbleUntil;
+    private StaticLayout bubbleLayout;
+    private int bubbleLayoutWidth;
+    private float bubbleTextWidth;
+    private float bubbleWidth;
+    private int bubbleHeight;
     private long cheerUntil;
     private long napUntil;
     private int idleTick;
     private boolean closing;
+    private Shader menuShader;
+    private int menuShaderHeight;
+    private Shader pickerShader;
+    private int pickerShaderHeight;
 
     public OverlayPetView(Context context) {
         super(context);
         setWillNotDraw(false);
+        preferences = new PetPreferences(context);
         touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
         scaleDetector = new ScaleGestureDetector(context, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
             @Override
@@ -220,9 +217,8 @@ public class OverlayPetView extends View {
                 humanForm[i] = false;
             }
         }
-        int saved = OverlayPetService.savedCharacterIndex(context);
-        characterIndex = saved >= 0 && saved < CHARACTER_IDS.length ? saved : 0;
-        sizeLevel = OverlayPetService.savedSizeLevel(context);
+        characterIndex = CharacterRoster.clampIndex(preferences.characterIndex());
+        sizeLevel = clampSizeLevel(preferences.sizeLevel(DEFAULT_SIZE_LEVEL));
     }
 
     public void setHost(Host host) {
@@ -272,7 +268,7 @@ public class OverlayPetView extends View {
         } else if (System.currentTimeMillis() < bubbleUntil) {
             drawBubble(canvas);
         }
-        postInvalidateOnAnimation();
+        scheduleNextFrame();
     }
 
     @Override
@@ -403,7 +399,7 @@ public class OverlayPetView extends View {
 
     private void selectCharacter(int index) {
         characterIndex = index;
-        OverlayPetService.saveCharacterIndex(getContext(), characterIndex);
+        preferences.saveCharacterIndex(characterIndex);
         happiness = 82;
         energy = Math.max(energy, 48);
         say(CharacterTalk.greeting(characterIndex), 3200);
@@ -569,8 +565,12 @@ public class OverlayPetView extends View {
         float left = getWidth() - width - dp(16);
         float top = dp(8);
         paint.setStyle(Paint.Style.FILL);
-        paint.setShader(new LinearGradient(0, top, 0, top + height,
-                Color.argb(240, 45, 46, 52), Color.argb(240, 20, 21, 25), Shader.TileMode.CLAMP));
+        if (menuShader == null || menuShaderHeight != Math.round(height)) {
+            menuShaderHeight = Math.round(height);
+            menuShader = new LinearGradient(0, top, 0, top + height,
+                    Color.argb(240, 45, 46, 52), Color.argb(240, 20, 21, 25), Shader.TileMode.CLAMP);
+        }
+        paint.setShader(menuShader);
         rect.set(left, top, left + width, top + height);
         canvas.drawRoundRect(rect, dp(22), dp(22), paint);
         paint.setShader(null);
@@ -624,8 +624,12 @@ public class OverlayPetView extends View {
         float panelHeight = pickerPanelHeight();
 
         paint.setStyle(Paint.Style.FILL);
-        paint.setShader(new LinearGradient(0, panelTop, 0, panelTop + panelHeight,
-                Color.argb(244, 45, 46, 52), Color.argb(244, 20, 21, 25), Shader.TileMode.CLAMP));
+        if (pickerShader == null || pickerShaderHeight != Math.round(panelHeight)) {
+            pickerShaderHeight = Math.round(panelHeight);
+            pickerShader = new LinearGradient(0, panelTop, 0, panelTop + panelHeight,
+                    Color.argb(244, 45, 46, 52), Color.argb(244, 20, 21, 25), Shader.TileMode.CLAMP);
+        }
+        paint.setShader(pickerShader);
         rect.set(panelLeft, panelTop, panelLeft + panelWidth, panelTop + panelHeight);
         canvas.drawRoundRect(rect, dp(22), dp(22), paint);
         paint.setShader(null);
@@ -678,27 +682,10 @@ public class OverlayPetView extends View {
     }
 
     private void drawBubble(Canvas canvas) {
-        if (bubble == null || bubble.length() == 0) {
+        if (bubble == null || bubble.length() == 0 || bubbleLayout == null) {
             return;
         }
         float size = petSize();
-        paint.setTextSize(dp(14));
-        paint.setTypeface(Typeface.DEFAULT);
-        paint.setTextAlign(Paint.Align.LEFT);
-        TextPaint textPaint = new TextPaint(paint);
-        textPaint.setColor(Color.rgb(28, 31, 36));
-        int maxWidth = dp(168);
-        StaticLayout layout = StaticLayout.Builder
-                .obtain(bubble, 0, bubble.length(), textPaint, maxWidth)
-                .setAlignment(Layout.Alignment.ALIGN_CENTER)
-                .setLineSpacing(0, 1f)
-                .build();
-        float textWidth = 0;
-        for (int i = 0; i < layout.getLineCount(); i++) {
-            textWidth = Math.max(textWidth, layout.getLineWidth(i));
-        }
-        float bubbleWidth = Math.max(dp(74), textWidth + dp(34));
-        float bubbleHeight = layout.getHeight() + dp(20);
         float left = getWidth() - size - dp(36);
         if (left + bubbleWidth > getWidth() - dp(8)) {
             left = getWidth() - bubbleWidth - dp(8);
@@ -715,8 +702,8 @@ public class OverlayPetView extends View {
         rect.set(left, top, left + bubbleWidth, top + bubbleHeight);
         canvas.drawRoundRect(rect, dp(17), dp(17), paint);
         canvas.save();
-        canvas.translate(left + (bubbleWidth - maxWidth) * 0.5f, top + dp(10));
-        layout.draw(canvas);
+        canvas.translate(left + (bubbleWidth - bubbleLayoutWidth) * 0.5f, top + dp(10));
+        bubbleLayout.draw(canvas);
         canvas.restore();
     }
 
@@ -789,6 +776,7 @@ public class OverlayPetView extends View {
     private void say(String text, long durationMs) {
         bubble = text;
         bubbleUntil = System.currentTimeMillis() + durationMs;
+        rebuildBubbleLayout();
         invalidate();
     }
 
@@ -802,10 +790,11 @@ public class OverlayPetView extends View {
     private Bitmap currentBitmap() {
         int form = humanForm[characterIndex] ? FORM_HUMAN : FORM_PET;
         int i = characterIndex;
-        if (System.currentTimeMillis() < cheerUntil && happyBitmaps[form][i] != null) {
+        long now = System.currentTimeMillis();
+        if (now < cheerUntil && happyBitmaps[form][i] != null) {
             return happyBitmaps[form][i];
         }
-        if (System.currentTimeMillis() < napUntil && sleepBitmaps[form][i] != null) {
+        if (now < napUntil && sleepBitmaps[form][i] != null) {
             return sleepBitmaps[form][i];
         }
         if (energy < 34 && sleepBitmaps[form][i] != null) {
@@ -841,6 +830,43 @@ public class OverlayPetView extends View {
 
     private float petSize() {
         return Math.min(getWidth(), getHeight()) * 0.9f;
+    }
+
+    private int clampSizeLevel(int level) {
+        return Math.max(0, Math.min(SIZE_LEVEL_COUNT - 1, level));
+    }
+
+    private void scheduleNextFrame() {
+        if (getVisibility() != VISIBLE) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (!menuVisible && !pickerVisible) {
+            postInvalidateDelayed(ANIMATION_FRAME_DELAY_MS);
+            return;
+        }
+        if (bubbleLayout != null && bubbleUntil > now) {
+            postInvalidateDelayed(Math.min(200, Math.max(16, bubbleUntil - now)));
+        }
+    }
+
+    private void rebuildBubbleLayout() {
+        int maxWidth = dp(168);
+        bubbleTextPaint.setColor(Color.rgb(28, 31, 36));
+        bubbleTextPaint.setTextSize(dp(14));
+        bubbleTextPaint.setTypeface(Typeface.DEFAULT);
+        bubbleLayout = StaticLayout.Builder
+                .obtain(bubble, 0, bubble.length(), bubbleTextPaint, maxWidth)
+                .setAlignment(Layout.Alignment.ALIGN_CENTER)
+                .setLineSpacing(0, 1f)
+                .build();
+        bubbleLayoutWidth = maxWidth;
+        bubbleTextWidth = 0;
+        for (int i = 0; i < bubbleLayout.getLineCount(); i++) {
+            bubbleTextWidth = Math.max(bubbleTextWidth, bubbleLayout.getLineWidth(i));
+        }
+        bubbleWidth = Math.max(dp(74), bubbleTextWidth + dp(34));
+        bubbleHeight = bubbleLayout.getHeight() + dp(20);
     }
 
     private String menuLabel(int index) {

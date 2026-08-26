@@ -18,10 +18,12 @@ import android.widget.TextView;
 
 public class MainActivity extends Activity {
     private static final int OVERLAY_PERMISSION_REQUEST = 2001;
+    private PetPreferences preferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        preferences = new PetPreferences(this);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setStatusBarColor(Color.rgb(248, 246, 241));
         getWindow().setNavigationBarColor(Color.rgb(248, 246, 241));
@@ -104,7 +106,7 @@ public class MainActivity extends Activity {
         });
         root.addView(startButton);
 
-        final boolean stayOnTop = OverlayPetService.isStayOnTop(this);
+        final boolean stayOnTop = preferences.isStayOnTop();
         Button pinButton = makeButton(getString(stayOnTop ? R.string.stay_on_top_on : R.string.stay_on_top_off));
         pinButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -160,8 +162,8 @@ public class MainActivity extends Activity {
     }
 
     private void toggleStayOnTop() {
-        boolean next = !OverlayPetService.isStayOnTop(this);
-        OverlayPetService.saveStayOnTop(this, next);
+        boolean next = !preferences.isStayOnTop();
+        preferences.saveStayOnTop(next);
         if (OverlayPetService.running) {
             Intent intent = new Intent(this, OverlayPetService.class);
             intent.setAction(OverlayPetService.ACTION_SET_STAY_ON_TOP);

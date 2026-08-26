@@ -25,19 +25,20 @@ import android.view.OrientationEventListener;
 import android.view.View;
 import android.view.WindowManager;
 
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+
 public class OverlayPetService extends Service implements OverlayPetView.Host {
     static final String ACTION_SET_STAY_ON_TOP = "com.pioneer.desktoppetorhumanmobile.SET_STAY_ON_TOP";
     static final String EXTRA_STAY_ON_TOP = "stay_on_top";
     private static final String CHANNEL_ID = "desktop_pet_overlay";
-    private static final String PREFS_NAME = "desktop_pet";
-    private static final String PREF_STAY_ON_TOP = "stay_on_top";
-    private static final String PREF_CHARACTER_INDEX = "character_index";
-    private static final String PREF_SIZE_LEVEL = "size_level";
-    private static final String PREF_POS_X = "pos_x";
-    private static final String PREF_POS_Y = "pos_y";
     private static final int NOTIFICATION_ID = 1001;
+    private static final long APP_WATCH_INTERVAL_MS = 900;
+    private static final long USAGE_EVENT_WINDOW_MS = 5000;
+    private static final long USAGE_ACCESS_CACHE_MS = 10000;
 
-    static boolean running;
+    static volatile boolean running;
 
     private WindowManager windowManager;
     private WindowManager.LayoutParams params;
@@ -56,10 +57,15 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
     private int physicalSnap;
     private DisplayManager displayManager;
     private OrientationEventListener orientationListener;
+    private UsageStatsManager usageStatsManager;
+    private PetPreferences preferences;
     private String lastForegroundPackage = "";
     private long lastAppSpeakAt;
+    private long usageAccessCheckedAt;
+    private boolean usageAccessGranted;
     private boolean appWatchWarm = true;
     private final java.util.ArrayDeque<AppTalkItem> pendingAppTalks = new java.util.ArrayDeque<>();
+    private final Map<String, String> appLabelCache = new HashMap<>();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final Runnable savePositionRunnable = new Runnable() {
         @Override
@@ -71,7 +77,7 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
         @Override
         public void run() {
             pollForegroundApp();
-            mainHandler.postDelayed(this, 900);
+            mainHandler.postDelayed(this, APP_WATCH_INTERVAL_MS);
         }
     };
     private final DisplayManager.DisplayListener displayListener = new DisplayManager.DisplayListener() {
@@ -103,9 +109,11 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
     public void onCreate() {
         super.onCreate();
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        preferences = new PetPreferences(this);
+        usageStatsManager = (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
         running = true;
-        stayOnTop = isStayOnTop(this);
-        sizeLevel = savedSizeLevel(this);
+        stayOnTop = preferences.isStayOnTop();
+        sizeLevel = validSizeLevel(preferences.sizeLevel(OverlayPetView.DEFAULT_SIZE_LEVEL));
         overlayMode = OverlayPetView.MODE_COMPACT;
         rebuildSizes();
         captureScreen();
@@ -154,6 +162,8 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
         mainHandler.removeCallbacks(appWatchRunnable);
         mainHandler.removeCallbacks(savePositionRunnable);
         savePositionNow();
+        pendingAppTalks.clear();
+        appLabelCache.clear();
         if (orientationListener != null) {
             orientationListener.disable();
         }
@@ -195,7 +205,7 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
             return;
         }
         sizeLevel = clamped;
-        saveSizeLevel(this, sizeLevel);
+        preferences.saveSizeLevel(sizeLevel);
         rebuildSizes();
         applyCurrentLayout();
     }
@@ -229,42 +239,11 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
         stopSelf();
     }
 
-    static boolean isStayOnTop(Context context) {
-        return context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(PREF_STAY_ON_TOP, true);
-    }
-
-    static void saveStayOnTop(Context context, boolean stay) {
-        context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .edit()
-                .putBoolean(PREF_STAY_ON_TOP, stay)
-                .apply();
-    }
-
-    static int savedCharacterIndex(Context context) {
-        return context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getInt(PREF_CHARACTER_INDEX, 0);
-    }
-
-    static void saveCharacterIndex(Context context, int index) {
-        context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .edit()
-                .putInt(PREF_CHARACTER_INDEX, index)
-                .apply();
-    }
-
-    static int savedSizeLevel(Context context) {
-        int level = context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .getInt(PREF_SIZE_LEVEL, OverlayPetView.DEFAULT_SIZE_LEVEL);
+    private int validSizeLevel(int level) {
         if (level < 0 || level >= OverlayPetView.SIZE_LEVEL_COUNT) {
             return OverlayPetView.DEFAULT_SIZE_LEVEL;
         }
         return level;
-    }
-
-    static void saveSizeLevel(Context context, int level) {
-        context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .edit()
-                .putInt(PREF_SIZE_LEVEL, level)
-                .apply();
     }
 
     private void scheduleSavePosition() {
@@ -278,18 +257,13 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
         }
         int x = params.x + params.width - compactSize;
         int y = params.y + params.height - compactSize;
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .edit()
-                .putInt(PREF_POS_X, x)
-                .putInt(PREF_POS_Y, y)
-                .apply();
+        preferences.savePosition(x, y);
     }
 
     private void applySavedOrDefaultPosition() {
-        android.content.SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        if (prefs.contains(PREF_POS_X) && prefs.contains(PREF_POS_Y)) {
-            params.x = prefs.getInt(PREF_POS_X, 0);
-            params.y = prefs.getInt(PREF_POS_Y, 0);
+        if (preferences.hasPosition()) {
+            params.x = preferences.positionX();
+            params.y = preferences.positionY();
             return;
         }
         pinToBottomRight();
@@ -328,7 +302,7 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
 
     private void applyStayOnTop(boolean stay) {
         stayOnTop = stay;
-        saveStayOnTop(this, stay);
+        preferences.saveStayOnTop(stay);
         if (params == null || petView == null) {
             startForeground(NOTIFICATION_ID, createNotification());
             return;
@@ -340,6 +314,9 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
         }
         params.flags = overlayFlags();
         petView.setVisibility(stay ? View.VISIBLE : View.GONE);
+        if (!stay) {
+            clampWindowPosition();
+        }
         windowManager.updateViewLayout(petView, params);
         startForeground(NOTIFICATION_ID, createNotification());
     }
@@ -434,8 +411,16 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
         params.height = newHeight;
         params.x -= newWidth - oldWidth;
         params.y -= newHeight - oldHeight;
+        clampWindowPosition();
         windowManager.updateViewLayout(petView, params);
         savePositionNow();
+    }
+
+    private void clampWindowPosition() {
+        int maxX = Math.max(0, screenWidth - params.width);
+        int maxY = Math.max(0, screenHeight - params.height);
+        params.x = Math.max(0, Math.min(maxX, params.x));
+        params.y = Math.max(0, Math.min(maxY, params.y));
     }
 
     private Notification createNotification() {
@@ -550,8 +535,7 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
     }
 
     private String readForegroundPackage() {
-        UsageStatsManager manager = (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
-        if (manager == null) {
+        if (usageStatsManager == null) {
             return null;
         }
         long now = System.currentTimeMillis();
@@ -559,7 +543,7 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
         long resumedAt = 0;
         String leftPackage = null;
         long leftAt = 0;
-        UsageEvents events = manager.queryEvents(now - 15000, now);
+        UsageEvents events = usageStatsManager.queryEvents(now - USAGE_EVENT_WINDOW_MS, now);
         UsageEvents.Event event = new UsageEvents.Event();
         while (events.hasNextEvent()) {
             events.getNextEvent(event);
@@ -605,20 +589,31 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
     }
 
     private boolean hasUsageAccess() {
+        long now = System.currentTimeMillis();
+        if (now - usageAccessCheckedAt < USAGE_ACCESS_CACHE_MS) {
+            return usageAccessGranted;
+        }
         AppOpsManager appOps = (AppOpsManager) getSystemService(APP_OPS_SERVICE);
         if (appOps == null) {
+            usageAccessCheckedAt = now;
+            usageAccessGranted = false;
             return false;
         }
         int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
                 android.os.Process.myUid(), getPackageName());
-        return mode == AppOpsManager.MODE_ALLOWED;
+        usageAccessCheckedAt = now;
+        usageAccessGranted = mode == AppOpsManager.MODE_ALLOWED;
+        if (!usageAccessGranted) {
+            appWatchWarm = true;
+        }
+        return usageAccessGranted;
     }
 
     private boolean shouldIgnorePackage(String packageName) {
         if (packageName == null || packageName.length() == 0 || packageName.equals(getPackageName())) {
             return true;
         }
-        String lower = packageName.toLowerCase();
+        String lower = packageName.toLowerCase(Locale.ROOT);
         return lower.contains("launcher")
                 || lower.contains("systemui")
                 || lower.equals("com.android.settings")
@@ -631,17 +626,27 @@ public class OverlayPetService extends Service implements OverlayPetView.Host {
     }
 
     private String labelFor(String packageName) {
+        String cached = appLabelCache.get(packageName);
+        if (cached != null) {
+            return cached;
+        }
+        String resolvedLabel = packageName;
         try {
             PackageManager packages = getPackageManager();
             ApplicationInfo info = packages.getApplicationInfo(packageName, 0);
-            CharSequence label = packages.getApplicationLabel(info);
-            if (label != null && label.length() > 0) {
-                return label.toString();
+            CharSequence appLabel = packages.getApplicationLabel(info);
+            if (appLabel != null && appLabel.length() > 0) {
+                resolvedLabel = appLabel.toString();
             }
         } catch (PackageManager.NameNotFoundException ignored) {
         }
-        int dot = packageName.lastIndexOf('.');
-        return dot >= 0 && dot + 1 < packageName.length() ? packageName.substring(dot + 1) : packageName;
+        if (resolvedLabel.equals(packageName)) {
+            int dot = packageName.lastIndexOf('.');
+            resolvedLabel = dot >= 0 && dot + 1 < packageName.length()
+                    ? packageName.substring(dot + 1) : packageName;
+        }
+        appLabelCache.put(packageName, resolvedLabel);
+        return resolvedLabel;
     }
 
     private int dp(int value) {
