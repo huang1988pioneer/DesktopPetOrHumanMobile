@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400" role="img" aria-labelledby="title description">
+  <title id="title">咕咕嘎嘎・睡眠</title>
+  <desc id="description">原創 SVG 重繪，沿用現有角色的髮型、服裝與配色。透明背景、可縮放的 Q 版人物。</desc>
+  <path id="hair-back-1" d="M119 116 Q105 158 107 187 L98 201 L119 203 L113 217 L146 212 L153 221 L249 219 L256 211 L284 215 L278 201 L299 202 Q277 180 282 124Z" fill="#363039" stroke="#433634" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="hair-back-2" d="M122 150 Q112 183 127 199 M279 154 Q276 183 283 192" fill="none" stroke="#635760" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="legs-3" d="M163 304 L163 361 Q169 370 182 364 L189 305 M212 305 L218 364 Q231 370 237 361 L237 303" fill="#FFD7B8" stroke="#BE8468" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="legs-4" d="M163 360 Q171 365 181 360 L185 373 Q184 380 153 379 Q147 372 163 360Z M219 360 Q229 365 237 360 Q253 372 247 379 L217 379 Q212 373 219 360Z" fill="#F1BD40" stroke="#BD8B36" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="legs-5" d="M154 375 L181 375 M219 375 L246 375" fill="none" stroke="#FAE8CF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="legs-6" d="M162 366 L181 366 M219 366 L238 366" fill="none" stroke="#EBC983" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="arms-7" d="M157 219 Q140 219 134 241 L134 259 Q136 273 155 280 L169 275 L168 264 L153 256 L164 239Z" fill="#FFD7B8" stroke="#BE8468" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="arms-8" d="M243 219 Q260 219 266 241 L266 259 Q264 273 245 280 L231 275 L232 264 L247 256 L236 239Z" fill="#FFD7B8" stroke="#BE8468" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="clothing-9" d="M157 218 Q180 208 200 211 Q221 208 243 218 Q239 247 242 270 L263 319 Q201 344 137 319 L160 269Z" fill="#36343B" stroke="#433634" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="clothing-10" d="M177 270 L162 317 M200 278 L200 326 M224 270 L241 317" fill="none" stroke="#60545E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="clothing-11" d="M179 212 L200 216 Q189 241 174 224Z M221 212 L200 216 Q211 241 226 224Z" fill="#FFF5E5" stroke="#433634" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="resting-hands-12" d="M152 265 Q163 257 183 272 L200 276 Q207 282 200 287 Q190 290 181 283 L158 280Z M248 265 Q237 257 217 272 L200 276 Q193 282 200 287 Q210 290 219 283 L242 280Z" fill="#FFD7B8" stroke="#BE8468" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="resting-hands-13" d="M180 275 L189 280 M220 275 L211 280" fill="none" stroke="#BE8468" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="face-14" d="M184 198 L183 220 Q200 231 217 220 L216 198Z" fill="#FFD7B8" stroke="#BE8468" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="face-15" d="M184 201 Q200 213 216 201 L216 212 Q200 224 184 212Z" fill="#E8AA87"/>
+  <path id="face-16" d="M108 154 C108 141.85 115.163 132 124 132 C132.837 132 140 141.85 140 154 C140 166.15 132.837 176 124 176 C115.163 176 108 166.15 108 154Z" fill="#FFD7B8" stroke="#BE8468" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="face-17" d="M260 154 C260 141.85 267.163 132 276 132 C284.837 132 292 141.85 292 154 C292 166.15 284.837 176 276 176 C267.163 176 260 166.15 260 154Z" fill="#FFD7B8" stroke="#BE8468" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="face-18" d="M121 145 Q110 147 119 162 M279 145 Q290 147 281 162" fill="none" stroke="#DAA084" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="face-19" d="M126 113 C123 83 154 65 200 65 C244 65 276 84 274 117 L274 163 C274 193 243 212 200 213 C157 212 126 193 126 163Z" fill="#FFD7B8" stroke="#BE8468" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="face-20" d="M131 160 Q136 192 173 201 Q217 215 254 189 Q236 210 200 213 C157 212 126 193 126 163Z" fill="#EDB18F" fill-opacity="0.55"/>
+  <path id="face-21" d="M136 175 C136 170.582 143.611 167 153 167 C162.389 167 170 170.582 170 175 C170 179.418 162.389 183 153 183 C143.611 183 136 179.418 136 175Z" fill="#F18F8B" fill-opacity="0.47"/>
+  <path id="face-22" d="M230 175 C230 170.582 237.611 167 247 167 C256.389 167 264 170.582 264 175 C264 179.418 256.389 183 247 183 C237.611 183 230 179.418 230 175Z" fill="#F18F8B" fill-opacity="0.47"/>
+  <path id="face-23" d="M146 174 L144 178 M153 175 L151 179 M247 175 L245 179 M254 174 L252 178" fill="none" stroke="#E58F88" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="face-24" d="M199 161 Q194 170 203 170" fill="none" stroke="#CF9374" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="face-25" d="M195.5 166 C195.5 165.006 196.619 164.2 198 164.2 C199.381 164.2 200.5 165.006 200.5 166 C200.5 166.994 199.381 167.8 198 167.8 C196.619 167.8 195.5 166.994 195.5 166Z" fill="#FFF0D8"/>
+  <path id="expression-26" d="M150 150 Q165 163 180 150" fill="none" stroke="#423336" stroke-width="4.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="expression-27" d="M150 150 L145 146" fill="none" stroke="#423336" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="expression-28" d="M151 122 Q165 117 177 121" fill="none" stroke="#665045" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="expression-29" d="M220 150 Q235 163 250 150" fill="none" stroke="#423336" stroke-width="4.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="expression-30" d="M220 150 L215 146" fill="none" stroke="#423336" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="expression-31" d="M221 122 Q235 117 247 121" fill="none" stroke="#665045" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="expression-32" d="M196 186 C196 183.239 197.791 181 200 181 C202.209 181 204 183.239 204 186 C204 188.761 202.209 191 200 191 C197.791 191 196 188.761 196 186Z" fill="#B87365" stroke="#995D53" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="hair-front-33" d="M118 162 Q102 135 113 96 Q122 44 174 41 Q200 33 232 43 Q279 55 288 107 Q295 147 279 169 L264 136 L261 105 Q217 117 156 105 L148 144 L137 174 L127 182Z" fill="#3D353E" stroke="#433634" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="hair-front-34" d="M129 99 Q129 64 168 54 Q212 40 244 58 Q213 52 188 67 L179 102Z" fill="#60515A"/>
+  <path id="hair-front-35" d="M161 66 L158 104 M179 59 L178 106 M198 57 L198 108 M218 59 L219 107 M237 68 L240 106" fill="none" stroke="#81707A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="hair-front-36" d="M134 110 L126 151 M270 111 L279 146" fill="none" stroke="#6C5C66" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="hair-front-37" d="M120 109 L143 122 L138 130 L114 117Z" fill="#777780" stroke="#3F3D48" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="hair-front-38" d="M117 106 L138 127 M125 101 L146 121" fill="none" stroke="#B0A3AC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="mood-39" d="M303 106 L318 106 L303 122 L318 122 M324 80 L343 80 L324 100 L343 100 M340 50 L365 50 L340 73 L365 73" fill="none" stroke="#8297AC" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -58,6 +58,9 @@ enum CompanionArt {
         case .happy: moodName = "happy"
         case .sleep: moodName = "sleep"
         }
+        if human, let vector = UIImage(named: "vector_\(id)_human_\(moodName)") {
+            return vector
+        }
         let preferred: String
         let fallback: String
         if primaryIsHuman {

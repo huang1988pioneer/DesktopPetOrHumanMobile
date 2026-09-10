@@ -1,0 +1,63 @@
+{
+  "viewBox": [
+    0,
+    0,
+    400,
+    400
+  ],
+  "moods": [
+    "idle",
+    "happy",
+    "sleep"
+  ],
+  "characters": [
+    {
+      "id": "fengge",
+      "name": "鋒哥"
+    },
+    {
+      "id": "fengxiong",
+      "name": "鋒兄"
+    },
+    {
+      "id": "gugugaga",
+      "name": "咕咕嘎嘎"
+    },
+    {
+      "id": "laowangmao",
+      "name": "老王貓"
+    },
+    {
+      "id": "miaobaibai",
+      "name": "喵白白"
+    },
+    {
+      "id": "miaobubu",
+      "name": "喵布布"
+    },
+    {
+      "id": "miaoniang",
+      "name": "喵娘"
+    },
+    {
+      "id": "tuge",
+      "name": "兔哥"
+    },
+    {
+      "id": "xiaotu",
+      "name": "小兔"
+    },
+    {
+      "id": "xiaoying",
+      "name": "小影"
+    },
+    {
+      "id": "yamei",
+      "name": "雅美"
+    },
+    {
+      "id": "yumei",
+      "name": "玉美"
+    }
+  ]
+}

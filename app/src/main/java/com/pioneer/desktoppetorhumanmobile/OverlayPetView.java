@@ -1,8 +1,6 @@
 package com.pioneer.desktoppetorhumanmobile;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
@@ -11,6 +9,7 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Layout;
@@ -63,9 +62,9 @@ public class OverlayPetView extends View {
     private final RectF rect = new RectF();
     private final Path path = new Path();
     private final TextPaint bubbleTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
-    private final Bitmap[][] idleBitmaps = new Bitmap[2][CHARACTER_IDS.length];
-    private final Bitmap[][] happyBitmaps = new Bitmap[2][CHARACTER_IDS.length];
-    private final Bitmap[][] sleepBitmaps = new Bitmap[2][CHARACTER_IDS.length];
+    private final Drawable[][] idleDrawables = new Drawable[2][CHARACTER_IDS.length];
+    private final Drawable[][] happyDrawables = new Drawable[2][CHARACTER_IDS.length];
+    private final Drawable[][] sleepDrawables = new Drawable[2][CHARACTER_IDS.length];
     private final boolean[] humanForm = new boolean[CHARACTER_IDS.length];
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ScaleGestureDetector scaleDetector;
@@ -192,30 +191,16 @@ public class OverlayPetView extends View {
         });
         gestureDetector.setIsLongpressEnabled(false);
         for (int i = 0; i < CHARACTER_IDS.length; i++) {
-            Bitmap idle = loadBitmap(CHARACTER_IDS[i] + "_idle");
-            Bitmap happy = loadBitmap(CHARACTER_IDS[i] + "_happy");
-            Bitmap sleep = loadBitmap(CHARACTER_IDS[i] + "_sleep");
-            if (PRIMARY_IS_HUMAN[i]) {
-                idleBitmaps[FORM_HUMAN][i] = idle;
-                happyBitmaps[FORM_HUMAN][i] = happy;
-                sleepBitmaps[FORM_HUMAN][i] = sleep;
-                idleBitmaps[FORM_PET][i] = loadBitmap(CHARACTER_IDS[i] + "_pet_idle");
-                happyBitmaps[FORM_PET][i] = firstBitmap(
-                        loadBitmap(CHARACTER_IDS[i] + "_pet_happy"), idleBitmaps[FORM_PET][i]);
-                sleepBitmaps[FORM_PET][i] = firstBitmap(
-                        loadBitmap(CHARACTER_IDS[i] + "_pet_sleep"), idleBitmaps[FORM_PET][i]);
-                humanForm[i] = true;
-            } else {
-                idleBitmaps[FORM_PET][i] = idle;
-                happyBitmaps[FORM_PET][i] = happy;
-                sleepBitmaps[FORM_PET][i] = sleep;
-                idleBitmaps[FORM_HUMAN][i] = loadBitmap(CHARACTER_IDS[i] + "_human_idle");
-                happyBitmaps[FORM_HUMAN][i] = firstBitmap(
-                        loadBitmap(CHARACTER_IDS[i] + "_human_happy"), idleBitmaps[FORM_HUMAN][i]);
-                sleepBitmaps[FORM_HUMAN][i] = firstBitmap(
-                        loadBitmap(CHARACTER_IDS[i] + "_human_sleep"), idleBitmaps[FORM_HUMAN][i]);
-                humanForm[i] = false;
-            }
+            idleDrawables[FORM_HUMAN][i] = loadHumanDrawable(i, "idle");
+            happyDrawables[FORM_HUMAN][i] = loadHumanDrawable(i, "happy");
+            sleepDrawables[FORM_HUMAN][i] = loadHumanDrawable(i, "sleep");
+            String petPrefix = CHARACTER_IDS[i] + (PRIMARY_IS_HUMAN[i] ? "_pet" : "");
+            idleDrawables[FORM_PET][i] = loadDrawable(petPrefix + "_idle");
+            happyDrawables[FORM_PET][i] = firstDrawable(
+                    loadDrawable(petPrefix + "_happy"), idleDrawables[FORM_PET][i]);
+            sleepDrawables[FORM_PET][i] = firstDrawable(
+                    loadDrawable(petPrefix + "_sleep"), idleDrawables[FORM_PET][i]);
+            humanForm[i] = PRIMARY_IS_HUMAN[i];
         }
         characterIndex = CharacterRoster.clampIndex(preferences.characterIndex());
         sizeLevel = clampSizeLevel(preferences.sizeLevel(DEFAULT_SIZE_LEVEL));
@@ -512,7 +497,7 @@ public class OverlayPetView extends View {
     }
 
     private void drawPet(Canvas canvas) {
-        Bitmap bitmap = currentBitmap();
+        Drawable drawable = currentDrawable();
         float size = petSize();
         float left = getWidth() - size - dp(12);
         float top = getHeight() - size - dp(8) - cheerHop();
@@ -532,9 +517,9 @@ public class OverlayPetView extends View {
         rect.set(left + size * 0.22f, top + size * 0.84f, left + size * 0.86f, top + size * 0.96f);
         canvas.drawOval(rect, paint);
         paint.setAlpha(255);
-        if (bitmap != null) {
+        if (drawable != null) {
             rect.set(left, top, left + size, top + size);
-            canvas.drawBitmap(bitmap, null, rect, paint);
+            drawCharacter(canvas, drawable, rect);
         } else {
             drawFallbackPet(canvas, left, top, size);
         }
@@ -666,9 +651,9 @@ public class OverlayPetView extends View {
             float thumbLeft = cellLeft + (cellW - thumb) * 0.5f;
             float thumbTop = cellTop + dp(4);
             rect.set(thumbLeft, thumbTop, thumbLeft + thumb, thumbTop + thumb);
-            Bitmap bitmap = rosterBitmap(i);
-            if (bitmap != null) {
-                canvas.drawBitmap(bitmap, null, rect, paint);
+            Drawable drawable = rosterDrawable(i);
+            if (drawable != null) {
+                drawCharacter(canvas, drawable, rect);
             }
             paint.setColor(selected ? Color.rgb(168, 206, 255) : Color.WHITE);
             paint.setTextAlign(Paint.Align.CENTER);
@@ -787,45 +772,62 @@ public class OverlayPetView extends View {
         invalidate();
     }
 
-    private Bitmap currentBitmap() {
+    private Drawable currentDrawable() {
         int form = humanForm[characterIndex] ? FORM_HUMAN : FORM_PET;
         int i = characterIndex;
         long now = System.currentTimeMillis();
-        if (now < cheerUntil && happyBitmaps[form][i] != null) {
-            return happyBitmaps[form][i];
+        if (now < cheerUntil && happyDrawables[form][i] != null) {
+            return happyDrawables[form][i];
         }
-        if (now < napUntil && sleepBitmaps[form][i] != null) {
-            return sleepBitmaps[form][i];
+        if (now < napUntil && sleepDrawables[form][i] != null) {
+            return sleepDrawables[form][i];
         }
-        if (energy < 34 && sleepBitmaps[form][i] != null) {
-            return sleepBitmaps[form][i];
+        if (energy < 34 && sleepDrawables[form][i] != null) {
+            return sleepDrawables[form][i];
         }
-        if (happiness > 78 && happyBitmaps[form][i] != null) {
-            return happyBitmaps[form][i];
+        if (happiness > 78 && happyDrawables[form][i] != null) {
+            return happyDrawables[form][i];
         }
-        if (idleBitmaps[form][i] != null) {
-            return idleBitmaps[form][i];
+        if (idleDrawables[form][i] != null) {
+            return idleDrawables[form][i];
         }
-        return rosterBitmap(i);
+        return rosterDrawable(i);
     }
 
-    private Bitmap rosterBitmap(int index) {
+    private Drawable rosterDrawable(int index) {
         return PRIMARY_IS_HUMAN[index]
-                ? idleBitmaps[FORM_HUMAN][index]
-                : idleBitmaps[FORM_PET][index];
+                ? idleDrawables[FORM_HUMAN][index]
+                : idleDrawables[FORM_PET][index];
     }
 
     private String modeLabel() {
         return humanForm[characterIndex] ? "人形模式" : PET_MODE_NAMES[characterIndex];
     }
 
-    private Bitmap firstBitmap(Bitmap preferred, Bitmap fallback) {
+    private Drawable firstDrawable(Drawable preferred, Drawable fallback) {
         return preferred != null ? preferred : fallback;
     }
 
-    private Bitmap loadBitmap(String name) {
+    private Drawable loadDrawable(String name) {
         int id = getResources().getIdentifier(name, "drawable", getContext().getPackageName());
-        return id == 0 ? null : BitmapFactory.decodeResource(getResources(), id);
+        return id == 0 ? null : getResources().getDrawable(id, getContext().getTheme());
+    }
+
+    private Drawable loadHumanDrawable(int index, String mood) {
+        String id = CHARACTER_IDS[index];
+        Drawable vector = loadDrawable("vector_" + id + "_human_" + mood);
+        if (vector != null) {
+            return vector;
+        }
+        String legacyPrefix = id + (PRIMARY_IS_HUMAN[index] ? "" : "_human");
+        return firstDrawable(loadDrawable(legacyPrefix + "_" + mood),
+                loadDrawable(legacyPrefix + "_idle"));
+    }
+
+    private void drawCharacter(Canvas canvas, Drawable drawable, RectF bounds) {
+        drawable.setBounds(Math.round(bounds.left), Math.round(bounds.top),
+                Math.round(bounds.right), Math.round(bounds.bottom));
+        drawable.draw(canvas);
     }
 
     private float petSize() {

@@ -10,7 +10,8 @@ the user's actual One UI Home desktop and other apps.
 - Pet / human mode switch
 - Real Android overlay using `SYSTEM_ALERT_WINDOW`
 - 12 companion characters from the desktop reference project
-- PNG companion assets for idle, happy, and sleep states per character
+- 36 SVG human character illustrations (12 characters × idle, happy, sleep)
+- Native Android vector drawables and iOS vector image assets, with existing PNG pet forms
 - Tap, drag, and long-press menu interaction
 - Character switch, feed, play, rest, mode toggle, and close actions
 - Happiness, energy, and hunger meters
@@ -24,6 +25,21 @@ Open the project in Android Studio, or build from a terminal with Gradle:
 ```
 
 The project uses Android Gradle Plugin 8.10.1, `compileSdk 36`, and JDK 17.
+
+## Character artwork
+
+Human characters are redrawn as editable SVGs in `art/characters/`. Both apps
+prefer the new vector artwork while keeping the existing pet forms and interactions.
+See [the artwork guide](art/README.md) and [character overview](art/character-sheet-idle.svg).
+
+After editing an SVG, synchronize the native resources with Node.js:
+
+```shell
+node scripts/sync-character-art.mjs
+node scripts/sync-character-art.mjs --check
+```
+
+Generated assets are included, so regular Android and iOS builds do not require Node.js.
 
 ## iOS release
 

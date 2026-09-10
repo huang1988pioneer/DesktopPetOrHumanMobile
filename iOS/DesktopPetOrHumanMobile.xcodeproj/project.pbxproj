@@ -7,16 +7,18 @@
 /* Begin PBXBuildFile section */
   A00000000000000000000011 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000001 /* App.swift */; };
   A00000000000000000000021 /* CharacterTalk.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000020 /* CharacterTalk.swift */; };
+  A00000000000000000000024 /* CharacterArt.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000023 /* CharacterArt.xcassets */; };
 /* End PBXBuildFile section */
 /* Begin PBXFileReference section */
   A00000000000000000000001 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
   A00000000000000000000020 /* CharacterTalk.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterTalk.swift; sourceTree = "<group>"; };
+  A00000000000000000000023 /* CharacterArt.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = CharacterArt.xcassets; sourceTree = "<group>"; };
   A00000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
   A00000000000000000000003 /* DesktopPetOrHumanMobile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DesktopPetOrHumanMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 /* Begin PBXGroup section */
   A00000000000000000000004 = {isa = PBXGroup; children = (A00000000000000000000005 /* DesktopPetOrHumanMobile */, A00000000000000000000006 /* Products */); sourceTree = "<group>"; };
-  A00000000000000000000005 /* DesktopPetOrHumanMobile */ = {isa = PBXGroup; children = (A00000000000000000000001 /* App.swift */, A00000000000000000000020 /* CharacterTalk.swift */, A00000000000000000000002 /* Info.plist */); path = DesktopPetOrHumanMobile; sourceTree = "<group>"; };
+  A00000000000000000000005 /* DesktopPetOrHumanMobile */ = {isa = PBXGroup; children = (A00000000000000000000001 /* App.swift */, A00000000000000000000020 /* CharacterTalk.swift */, A00000000000000000000023 /* CharacterArt.xcassets */, A00000000000000000000002 /* Info.plist */); path = DesktopPetOrHumanMobile; sourceTree = "<group>"; };
   A00000000000000000000006 /* Products */ = {isa = PBXGroup; children = (A00000000000000000000003 /* DesktopPetOrHumanMobile.app */); name = Products; sourceTree = "<group>"; };
 /* End PBXGroup section */
 /* Begin PBXNativeTarget section */
@@ -26,7 +28,7 @@
   A00000000000000000000013 /* Project object */ = {isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2620; LastUpgradeCheck = 2620; TargetAttributes = { A00000000000000000000007 = { CreatedOnToolsVersion = 26.2; }; }; }; buildConfigurationList = A00000000000000000000014 /* Build configuration list for PBXProject */; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = A00000000000000000000004; productRefGroup = A00000000000000000000006 /* Products */; projectDirPath = ""; projectRoot = ""; targets = (A00000000000000000000007 /* DesktopPetOrHumanMobile */); };
 /* End PBXProject section */
 /* Begin PBXResourcesBuildPhase section */
-  A00000000000000000000012 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+  A00000000000000000000012 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000024 /* CharacterArt.xcassets in Resources */); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 /* Begin PBXSourcesBuildPhase section */
   A00000000000000000000009 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000011 /* App.swift in Sources */, A00000000000000000000021 /* CharacterTalk.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
