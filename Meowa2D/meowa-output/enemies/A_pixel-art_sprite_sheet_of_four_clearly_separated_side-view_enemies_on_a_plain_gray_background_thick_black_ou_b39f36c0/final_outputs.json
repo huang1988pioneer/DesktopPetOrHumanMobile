@@ -1,0 +1,11 @@
+{
+  "status": "success",
+  "job_id": "job_e6b1167b66e94272bc013b93d09a0d21",
+  "outputs": [
+    {
+      "type": "media",
+      "path": "D:\\CODE\\Meowa2D\\meowa-output\\enemies\\A_pixel-art_sprite_sheet_of_four_clearly_separated_side-view_enemies_on_a_plain_gray_background_thick_black_ou_b39f36c0\\sprite_00.png",
+      "mime_type": "image/png"
+    }
+  ]
+}

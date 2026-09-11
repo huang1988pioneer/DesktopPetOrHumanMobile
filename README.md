@@ -65,3 +65,9 @@ Output:
 The signed IPA can be installed on devices registered to team `CR63JJ5KWY`.
 Unsigned IPA is for later re-signing. App Store / TestFlight still needs
 Archive and Distribute App in Xcode.
+
+## Meowa2D
+
+`Meowa2D/` is a Unity 2D side-view game (Hourglass Palace) starring Miaobaibai.
+Open `Meowa2D/HourglassPalace` in the Unity Editor. Art sources and helper
+scripts live beside the Unity project in that folder.

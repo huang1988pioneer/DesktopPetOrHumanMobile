@@ -1,0 +1,21 @@
+{
+  "status": "success",
+  "job_id": "job_a828252189eb4bad9b54cf60ad653f01",
+  "outputs": [
+    {
+      "type": "media",
+      "path": "D:\\CODE\\Meowa2D\\meowa-output\\hero\\Bipedal_white_cat_hero_named_Miaobaibai_matching_the_reference_fluffy_white_hooded_onesie_pink_inner_ears_blac_245a8450\\sprite_00.png",
+      "mime_type": "image/png"
+    },
+    {
+      "type": "media",
+      "path": "D:\\CODE\\Meowa2D\\meowa-output\\hero\\Bipedal_white_cat_hero_named_Miaobaibai_matching_the_reference_fluffy_white_hooded_onesie_pink_inner_ears_blac_245a8450\\sprite_01.png",
+      "mime_type": "image/png"
+    },
+    {
+      "type": "media",
+      "path": "D:\\CODE\\Meowa2D\\meowa-output\\hero\\Bipedal_white_cat_hero_named_Miaobaibai_matching_the_reference_fluffy_white_hooded_onesie_pink_inner_ears_blac_245a8450\\sprite_pack_preview.png",
+      "mime_type": "image/png"
+    }
+  ]
+}

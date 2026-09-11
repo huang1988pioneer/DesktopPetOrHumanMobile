@@ -1,0 +1,11 @@
+{
+  "status": "success",
+  "job_id": "job_c9db63f7a0b7445ab6e0cd283f59b5ab",
+  "outputs": [
+    {
+      "type": "media",
+      "path": "D:\\CODE\\Meowa2D\\meowa-output\\hero-custom\\Keep_the_character_recognizable_from_the_reference_but_keep_the_design_minimal_and_replace_complex_fur_texture_3b1cc74e\\final_pixel_snapper.png",
+      "mime_type": "image/png"
+    }
+  ]
+}

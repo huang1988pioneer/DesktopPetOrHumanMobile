@@ -1,0 +1,21 @@
+{
+  "status": "success",
+  "job_id": "job_3b5f1df308af4a74aa5777fc8faa43de",
+  "outputs": [
+    {
+      "type": "media",
+      "path": "D:\\CODE\\Meowa2D\\meowa-output\\map\\Playable_moonlit_Persian_palace_interior_for_a_side-view_platformer_sandstone_columns_pointed_arches_tiled_flo_9ab42e2e\\midground.png",
+      "mime_type": "image/png"
+    },
+    {
+      "type": "media",
+      "path": "D:\\CODE\\Meowa2D\\meowa-output\\map\\Playable_moonlit_Persian_palace_interior_for_a_side-view_platformer_sandstone_columns_pointed_arches_tiled_flo_9ab42e2e\\foreground.png",
+      "mime_type": "image/png"
+    },
+    {
+      "type": "media",
+      "path": "D:\\CODE\\Meowa2D\\meowa-output\\map\\Playable_moonlit_Persian_palace_interior_for_a_side-view_platformer_sandstone_columns_pointed_arches_tiled_flo_9ab42e2e\\background.png",
+      "mime_type": "image/png"
+    }
+  ]
+}

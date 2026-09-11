@@ -1,0 +1,11 @@
+{
+  "status": "success",
+  "job_id": "job_d522fb0e825c4f4e8d01bec21e407918",
+  "outputs": [
+    {
+      "type": "media",
+      "path": "D:\\CODE\\Meowa2D\\meowa-output\\hero-pixelate\\miaobaibai_side_canonical\\result.png",
+      "mime_type": "image/png"
+    }
+  ]
+}

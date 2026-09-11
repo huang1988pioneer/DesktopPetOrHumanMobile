@@ -1,0 +1,21 @@
+{
+  "status": "success",
+  "job_id": "job_a73ad4515b4846959f3119781998f01b",
+  "outputs": [
+    {
+      "type": "media",
+      "path": "D:\\CODE\\Meowa2D\\meowa-output\\hero-walk\\The_white_cat_walks_forward_to_the_right_Legs_alternate_looping_walk_cycle_locked_camera_keep_the_scimitar\\result_output_url.webp",
+      "mime_type": "image/webp"
+    },
+    {
+      "type": "media",
+      "path": "D:\\CODE\\Meowa2D\\meowa-output\\hero-walk\\The_white_cat_walks_forward_to_the_right_Legs_alternate_looping_walk_cycle_locked_camera_keep_the_scimitar\\result_output_transparent_output_urls_gif.gif",
+      "mime_type": "image/gif"
+    },
+    {
+      "type": "media",
+      "path": "D:\\CODE\\Meowa2D\\meowa-output\\hero-walk\\The_white_cat_walks_forward_to_the_right_Legs_alternate_looping_walk_cycle_locked_camera_keep_the_scimitar\\result_output_transparent_output_urls_png.png",
+      "mime_type": "image/png"
+    }
+  ]
+}
