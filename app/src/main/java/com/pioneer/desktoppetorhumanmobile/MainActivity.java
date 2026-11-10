@@ -6,6 +6,7 @@ import android.app.AppOpsManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -15,6 +16,8 @@ import android.view.View;
 import android.view.Window;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ImageView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 public class MainActivity extends Activity {
@@ -46,11 +49,35 @@ public class MainActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.setPadding(dp(28), dp(44), dp(28), dp(28));
+        root.setPadding(dp(28), dp(28), dp(28), dp(28));
         root.setBackgroundColor(Color.rgb(248, 246, 241));
 
+        TextView eyebrow = new TextView(this);
+        eyebrow.setText("DESKTOP COMPANIONS");
+        eyebrow.setTextColor(Color.rgb(105, 101, 115));
+        eyebrow.setTextSize(12);
+        eyebrow.setLetterSpacing(0.12f);
+        eyebrow.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        root.addView(eyebrow, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        ImageView hero = new ImageView(this);
+        int heroArt = getResources().getIdentifier("gpt_daughter_idle", "drawable", getPackageName());
+        if (heroArt != 0) {
+            hero.setImageResource(heroArt);
+        }
+        hero.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        hero.setPadding(dp(14), dp(14), dp(14), dp(14));
+        GradientDrawable heroCard = new GradientDrawable();
+        heroCard.setColor(Color.WHITE);
+        heroCard.setCornerRadius(dp(28));
+        hero.setBackground(heroCard);
+        LinearLayout.LayoutParams heroParams = new LinearLayout.LayoutParams(dp(196), dp(196));
+        heroParams.setMargins(0, dp(16), 0, dp(12));
+        root.addView(hero, heroParams);
+
         TextView title = new TextView(this);
-        title.setText(R.string.overlay_permission_title);
+        title.setText(R.string.launcher_title);
         title.setTextColor(Color.rgb(30, 31, 36));
         title.setTextSize(24);
         title.setGravity(Gravity.CENTER);
@@ -59,7 +86,7 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         TextView body = new TextView(this);
-        body.setText(R.string.overlay_permission_body);
+        body.setText(R.string.launcher_body);
         body.setTextColor(Color.rgb(75, 79, 87));
         body.setTextSize(16);
         body.setGravity(Gravity.CENTER);
@@ -127,7 +154,11 @@ public class MainActivity extends Activity {
             }
         });
         root.addView(stopButton);
-        setContentView(root);
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setClipToPadding(false);
+        scroll.addView(root);
+        setContentView(scroll);
     }
 
     private Button makeButton(String text) {

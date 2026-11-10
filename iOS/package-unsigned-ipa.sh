@@ -25,7 +25,7 @@ mkdir -p "$APP_BUNDLE/Characters" "$DIST_DIR" "$BUILD_DIR/ModuleCache"
 printf 'APPL????' > "$APP_BUNDLE/PkgInfo"
 
 cp "$ASSET_SRC/"*.png "$APP_BUNDLE/Characters/"
-sips -z 180 180 "$ASSET_SRC/fengge_idle.png" --out "$APP_BUNDLE/AppIcon.png" >/dev/null
+sips -z 180 180 "$ASSET_SRC/gpt_daughter_idle.png" --out "$APP_BUNDLE/AppIcon.png" >/dev/null
 
 "$SWIFTC" \
   -sdk "$SDK_PATH" \

@@ -1,19 +1,16 @@
 # DesktopPetOrHumanMobile
 
-Android mobile app for a small desktop-pet style companion that can switch
-between pet and human modes. The current version runs as a real Android overlay:
-after the user grants "display over other apps", the companion floats on top of
-the user's actual One UI Home desktop and other apps.
+Android mobile app for a desktop pet companion. After the user grants
+"display over other apps", the selected character floats above the user's home
+screen and other apps.
 
 ## Features
 
-- Pet / human mode switch
 - Real Android overlay using `SYSTEM_ALERT_WINDOW`
-- 12 companion characters from the desktop reference project
-- 36 SVG human character illustrations (12 characters × idle, happy, sleep)
-- Native Android vector drawables and iOS vector image assets, with existing PNG pet forms
+- 10 new companions: GPT 娘、Claude 娘、鯨魚娘、咕咕嘎嘎、鋒兄、塗哥、喵布布、喵白白、牙妹、魚妹
+- Three-view design sheets and transparent front-view artwork for each companion
 - Tap, drag, and long-press menu interaction
-- Character switch, feed, play, rest, mode toggle, and close actions
+- Character switch, feed, play, rest, and close actions
 - Happiness, energy, and hunger meters
 
 ## Build
@@ -28,18 +25,17 @@ The project uses Android Gradle Plugin 8.10.1, `compileSdk 36`, and JDK 17.
 
 ## Character artwork
 
-Human characters are redrawn as editable SVGs in `art/characters/`. Both apps
-prefer the new vector artwork while keeping the existing pet forms and interactions.
-See [the artwork guide](art/README.md) and [character overview](art/character-sheet-idle.svg).
+Character turnarounds live in `art/turnarounds/`. Both apps use the transparent
+front-view PNG artwork generated from those sheets. The old character roster and
+pet/human mode have been replaced by the 10 new companions.
 
-After editing an SVG, synchronize the native resources with Node.js:
+After editing a turnaround sheet, regenerate the app art with Python 3 and FFmpeg:
 
 ```shell
-node scripts/sync-character-art.mjs
-node scripts/sync-character-art.mjs --check
+python3 scripts/extract-turnaround-fronts.py
 ```
 
-Generated assets are included, so regular Android and iOS builds do not require Node.js.
+Generated app assets are included, so regular Android and iOS builds do not require FFmpeg.
 
 ## iOS release
 

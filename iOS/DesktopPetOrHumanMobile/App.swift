@@ -17,22 +17,18 @@ struct DesktopPetOrHumanMobileApp: App {
 struct Companion: Identifiable {
     let id: String
     let name: String
-    let primaryIsHuman: Bool
-    let petModeName: String
 
     static let all: [Companion] = [
-        .init(id: "fengge", name: "鋒哥", primaryIsHuman: true, petModeName: "黑貓模式"),
-        .init(id: "fengxiong", name: "鋒兄", primaryIsHuman: true, petModeName: "柴犬模式"),
-        .init(id: "gugugaga", name: "咕咕嘎嘎", primaryIsHuman: false, petModeName: "企鵝模式"),
-        .init(id: "laowangmao", name: "老王貓", primaryIsHuman: false, petModeName: "招財貓模式"),
-        .init(id: "miaobaibai", name: "喵白白", primaryIsHuman: false, petModeName: "白貓模式"),
-        .init(id: "miaobubu", name: "喵布布", primaryIsHuman: false, petModeName: "三花模式"),
-        .init(id: "miaoniang", name: "喵娘", primaryIsHuman: true, petModeName: "貓咪模式"),
-        .init(id: "tuge", name: "兔哥", primaryIsHuman: true, petModeName: "兔子模式"),
-        .init(id: "xiaotu", name: "小兔", primaryIsHuman: true, petModeName: "兔子模式"),
-        .init(id: "xiaoying", name: "小影", primaryIsHuman: true, petModeName: "黑貓模式"),
-        .init(id: "yamei", name: "雅美", primaryIsHuman: true, petModeName: "紅貓模式"),
-        .init(id: "yumei", name: "玉美", primaryIsHuman: true, petModeName: "海豚模式")
+        .init(id: "gpt_daughter", name: "GPT 娘"),
+        .init(id: "claude_daughter", name: "Claude 娘"),
+        .init(id: "whale_daughter", name: "鯨魚娘"),
+        .init(id: "gugugaga", name: "咕咕嘎嘎"),
+        .init(id: "fengxiong", name: "鋒兄"),
+        .init(id: "tuge", name: "塗哥"),
+        .init(id: "miaobubu", name: "喵布布"),
+        .init(id: "miaobaibai", name: "喵白白"),
+        .init(id: "yamei", name: "牙妹"),
+        .init(id: "yumei", name: "魚妹")
     ]
 }
 
@@ -51,38 +47,18 @@ enum CompanionArt {
         return UIImage(named: name)
     }
 
-    static func image(id: String, human: Bool, mood: PetMood, primaryIsHuman: Bool) -> UIImage? {
+    static func image(id: String, mood: PetMood) -> UIImage? {
         let moodName: String
         switch mood {
         case .idle: moodName = "idle"
         case .happy: moodName = "happy"
         case .sleep: moodName = "sleep"
         }
-        if human, let vector = UIImage(named: "vector_\(id)_human_\(moodName)") {
-            return vector
-        }
-        let preferred: String
-        let fallback: String
-        if primaryIsHuman {
-            if human {
-                preferred = "\(id)_\(moodName)"
-                fallback = "\(id)_idle"
-            } else {
-                preferred = "\(id)_pet_\(moodName)"
-                fallback = "\(id)_pet_idle"
-            }
-        } else if human {
-            preferred = "\(id)_human_\(moodName)"
-            fallback = "\(id)_human_idle"
-        } else {
-            preferred = "\(id)_\(moodName)"
-            fallback = "\(id)_idle"
-        }
-        return image(named: preferred) ?? image(named: fallback) ?? image(named: "pet_\(moodName)") ?? image(named: "pet_idle")
+        return image(named: "\(id)_\(moodName)") ?? image(named: "\(id)_idle")
     }
 
-    static func roster(id: String, primaryIsHuman: Bool) -> UIImage? {
-        image(id: id, human: primaryIsHuman, mood: .idle, primaryIsHuman: primaryIsHuman)
+    static func roster(id: String) -> UIImage? {
+        image(id: id, mood: .idle)
     }
 }
 
@@ -94,7 +70,6 @@ final class PetStore: ObservableObject {
 
     @Published var running = false
     @Published var characterIndex = 0
-    @Published var humanForm: [Bool] = Companion.all.map(\.primaryIsHuman)
     @Published var sizeLevel = PetStore.defaultSizeLevel
     @Published var menuVisible = false
     @Published var pickerVisible = false
@@ -115,8 +90,6 @@ final class PetStore: ObservableObject {
 
     var companion: Companion { Companion.all[characterIndex] }
     var petSize: CGFloat { PetStore.sizePoints[sizeLevel] }
-    var isHuman: Bool { humanForm[characterIndex] }
-    var modeLabel: String { isHuman ? "人形模式" : companion.petModeName }
 
     func start() {
         closing = false
@@ -153,16 +126,17 @@ final class PetStore: ObservableObject {
         say(CharacterTalk.cheer(characterIndex), duration: 2.4)
     }
 
+    func feed() {
+        guard allowPetAction else { return }
+        updateStats(happiness: 7, energy: -1, fullness: 24)
+        say(CharacterTalk.feed(characterIndex), duration: 2.4)
+        hidePanels()
+    }
+
     func nap() {
         cheerUntil = .distantPast
         napUntil = Date().addingTimeInterval(3)
         say(CharacterTalk.sleep(characterIndex), duration: 2.4)
-        hidePanels()
-    }
-
-    func toggleMode() {
-        humanForm[characterIndex].toggle()
-        say(modeLabel)
         hidePanels()
     }
 
@@ -238,12 +212,7 @@ final class PetStore: ObservableObject {
         } else {
             mood = .idle
         }
-        return CompanionArt.image(
-            id: companion.id,
-            human: isHuman,
-            mood: mood,
-            primaryIsHuman: companion.primaryIsHuman
-        )
+        return CompanionArt.image(id: companion.id, mood: mood)
     }
 
     func cheerHop(at now: Date) -> CGFloat {
@@ -308,17 +277,17 @@ struct LauncherView: View {
         ZStack {
             Color(red: 248 / 255, green: 246 / 255, blue: 241 / 255).ignoresSafeArea()
             VStack(spacing: 18) {
-                if let icon = CompanionArt.roster(id: "fengge", primaryIsHuman: true) {
+                if let icon = CompanionArt.roster(id: "gpt_daughter") {
                     Image(uiImage: icon)
                         .resizable()
                         .scaledToFit()
                         .frame(width: 148, height: 148)
                 }
-                Text("讓桌寵出現在桌面上")
+                Text("讓新夥伴住進你的桌面")
                     .font(.system(size: 26, weight: .bold))
                     .foregroundStyle(Color(red: 30 / 255, green: 31 / 255, blue: 36 / 255))
                     .multilineTextAlignment(.center)
-                Text("iOS 無法讓第三方 App 浮在其他 App 上層。啟動後，桌寵會待在本 App 的桌面裡：可拖曳、長按開選單、點一下說話、連點開心、雙指縮放大小，並切換 12 位角色與人形／寵物模式。")
+                Text("iOS 不允許第三方 App 浮在其他 App 上層。啟動後，10 位新夥伴會住在這個 App 的桌面：可拖曳、長按開選單、點一下說話、連點開心、餵食、休息和雙指縮放。")
                     .font(.system(size: 16))
                     .foregroundStyle(Color(red: 75 / 255, green: 79 / 255, blue: 87 / 255))
                     .multilineTextAlignment(.center)
@@ -530,7 +499,7 @@ struct MenuPanel: View {
     private var items: [(String, Color, () -> Void)] {
         [
             ("角色", Color(red: 81 / 255, green: 156 / 255, blue: 1), { store.showPicker() }),
-            ("模式", Color(red: 1, green: 193 / 255, blue: 87 / 255), { store.toggleMode() }),
+            ("餵食", Color(red: 1, green: 193 / 255, blue: 87 / 255), { store.feed() }),
             ("睡一下", Color(red: 164 / 255, green: 148 / 255, blue: 1), { store.nap() }),
             (store.hidden ? "顯示桌寵" : "先躲起來", Color(red: 80 / 255, green: 196 / 255, blue: 186 / 255), { store.toggleHidden() }),
             ("關閉", Color(red: 1, green: 100 / 255, blue: 100 / 255), { store.beginFarewell() })
@@ -599,7 +568,7 @@ struct PickerPanel: View {
                         store.selectCharacter(index)
                     } label: {
                         VStack(spacing: 4) {
-                            if let image = CompanionArt.roster(id: companion.id, primaryIsHuman: companion.primaryIsHuman) {
+                            if let image = CompanionArt.roster(id: companion.id) {
                                 Image(uiImage: image)
                                     .resizable()
                                     .scaledToFit()

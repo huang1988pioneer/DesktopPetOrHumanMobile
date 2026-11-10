@@ -1,29 +1,15 @@
 package com.pioneer.desktoppetorhumanmobile;
 
-/** The shared ordering for the 12 character assets, labels, and dialogue. */
+/** The shared ordering for the 10 companion assets, labels, and dialogue. */
 final class CharacterRoster {
     static final String[] IDS = {
-            "fengge", "fengxiong", "gugugaga", "laowangmao",
-            "miaobaibai", "miaobubu", "miaoniang", "tuge",
-            "xiaotu", "xiaoying", "yamei", "yumei"
+            "gpt_daughter", "claude_daughter", "whale_daughter", "gugugaga",
+            "fengxiong", "tuge", "miaobubu", "miaobaibai", "yamei", "yumei"
     };
 
     static final String[] NAMES = {
-            "鋒哥", "鋒兄", "咕咕嘎嘎", "老王貓",
-            "喵白白", "喵布布", "喵娘", "兔哥",
-            "小兔", "小影", "雅美", "玉美"
-    };
-
-    static final boolean[] PRIMARY_IS_HUMAN = {
-            true, true, false, false,
-            false, false, true, true,
-            true, true, true, true
-    };
-
-    static final String[] PET_MODE_NAMES = {
-            "黑貓模式", "柴犬模式", "企鵝模式", "招財貓模式",
-            "白貓模式", "三花模式", "貓咪模式", "兔子模式",
-            "兔子模式", "黑貓模式", "紅貓模式", "海豚模式"
+            "GPT 娘", "Claude 娘", "鯨魚娘", "咕咕嘎嘎",
+            "鋒兄", "塗哥", "喵布布", "喵白白", "牙妹", "魚妹"
     };
 
     private CharacterRoster() {

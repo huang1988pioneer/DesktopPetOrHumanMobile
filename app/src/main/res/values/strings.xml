@@ -1,7 +1,9 @@
 <resources>
-    <string name="app_name">Desktop Pet Or Human</string>
-    <string name="overlay_permission_title">讓桌寵出現在桌面上</string>
-    <string name="overlay_permission_body">請允許「顯示在其他應用程式上層」。若要讓桌寵在開啟／關閉其他 App 時說話，還需要「使用量資料存取」。\n\n從 APK 安裝時，三星會把這個開關鎖成「由受限制的設定控管」。請先開啟應用程式資訊，點右上角 ⋮，選擇「允許受限制的設定」，再回去把使用量權限打開。</string>
+    <string name="app_name">桌寵夥伴</string>
+    <string name="launcher_title">讓新夥伴住進你的桌面</string>
+    <string name="launcher_body">10 位新夥伴已準備好陪你工作和休息。啟動後可以拖曳角色、點一下聊天、連點玩耍、長按切換角色或餵食，也能雙指調整大小。\n\n要讓桌寵浮在其他 App 上方，請允許「顯示在其他應用程式上層」。如果想讓夥伴在切換 App 時聊天，還需要開啟「使用量資料存取」。</string>
+    <string name="overlay_permission_title">允許桌寵顯示在其他 App 上方</string>
+    <string name="overlay_permission_body">請允許「顯示在其他應用程式上層」。若要讓夥伴在開啟／關閉其他 App 時說話，還需要「使用量資料存取」。\n\n從 APK 安裝時，三星可能會限制使用量權限。請先開啟應用程式資訊，點右上角 ⋮，選擇「允許受限制的設定」，再回去打開使用量權限。</string>
     <string name="overlay_permission_button">開啟上層顯示權限</string>
     <string name="start_pet_button">啟動桌寵</string>
     <string name="stop_pet_button">停止桌寵</string>
